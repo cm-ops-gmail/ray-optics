@@ -1,0 +1,103 @@
+{
+  "_meta": {
+    "brand": "10 Minute School",
+    "source": "projects/10MS1/DESIGN.md",
+    "generated": "2026-04-30",
+    "usage": "Feed into Google Stitch, Tailwind config, or any platform needing design tokens"
+  },
+  "colors": {
+    "primary":           "#1CAB55",
+    "primaryDeep":       "#17994B",
+    "primaryContainer":  "#D0FAD0",
+    "onPrimary":         "#FFFFFF",
+    "onPrimaryContainer":"#086347",
+    "greenLink":         "#149353",
+    "greenCta":          "#37C25C",
+    "errorRed":          "#DC2626",
+    "alertSurface":      "#FEF2F2",
+    "headerDark":        "#050B14",
+    "surface":           "#FFFFFF",
+    "surfaceSubtle":     "#F3F4F6",
+    "surfaceTinted":     "#EAFEF2",
+    "surfaceBlue":       "#EFF6FF",
+    "navActiveTint":     "#EAFEF2",
+    "inverse":           "#111827",
+    "text":              "#111827",
+    "textSecondary":     "#374151",
+    "textTertiary":      "#6B7280",
+    "textDisabled":      "#D1D5DB",
+    "iconInactive":      "#CDD1D7",
+    "outline":           "#E5E7EB",
+    "outlineVariant":    "#D1D5DB"
+  },
+  "typography": {
+    "fontEn":            "Inter",
+    "fontBn":            "Anek Bangla",
+    "googleFontsUrl":    "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Anek+Bangla:wght@400;500;600;700&display=swap",
+    "scale": {
+      "display":    { "size": "clamp(2.5rem,8vw,5rem)", "weight": 700, "lineHeight": 1,    "letterSpacing": "-0.02em" },
+      "headlineLg": { "size": "2rem",     "weight": 600, "lineHeight": 1.25 },
+      "headlineMd": { "size": "1.75rem",  "weight": 600, "lineHeight": 1.3  },
+      "headlineSm": { "size": "1.5rem",   "weight": 600, "lineHeight": 1.33 },
+      "titleLg":    { "size": "1.375rem", "weight": 600, "lineHeight": 1.27 },
+      "titleSec":   { "size": "1rem",     "weight": 700, "lineHeight": 1.4  },
+      "titleMd":    { "size": "0.9375rem","weight": 600, "lineHeight": 1.47 },
+      "titleSm":    { "size": "0.875rem", "weight": 500, "lineHeight": 1.43 },
+      "bodyLg":     { "size": "1rem",     "weight": 400, "lineHeight": 1.5  },
+      "bodyMd":     { "size": "0.8125rem","weight": 400, "lineHeight": 1.46 },
+      "bodySm":     { "size": "0.75rem",  "weight": 400, "lineHeight": 1.33 },
+      "labelLg":    { "size": "0.875rem", "weight": 600, "letterSpacing": "0.01em" },
+      "labelMd":    { "size": "0.75rem",  "weight": 500 },
+      "labelSm":    { "size": "0.6875rem","weight": 500, "letterSpacing": "0.05em", "textTransform": "uppercase" }
+    }
+  },
+  "radius": {
+    "sm":   "4px",
+    "md":   "8px",
+    "lg":   "10px",
+    "xl":   "12px",
+    "2xl":  "16px",
+    "3xl":  "24px",
+    "full": "999px"
+  },
+  "spacing": {
+    "xs":  "6px",
+    "sm":  "8px",
+    "sm2": "14px",
+    "md":  "12px",
+    "lg":  "16px",
+    "xl":  "24px",
+    "2xl": "32px",
+    "3xl": "48px"
+  },
+  "shadows": {
+    "card":  "0 1px 3px rgba(0,0,0,0.08)",
+    "hover": "0 4px 16px rgba(0,0,0,0.10)",
+    "modal": "0 8px 40px rgba(0,0,0,0.14)",
+    "tab":   "0 -4px 20px rgba(0,0,0,0.05)"
+  },
+  "breakpoints": {
+    "tablet":  "768px",
+    "desktop": "1280px",
+    "wide":    "1440px",
+    "maxContent": "1200px"
+  },
+  "components": {
+    "buttonRadius":     "999px",
+    "buttonIconSquare": "12px",
+    "cardRadiusLg":     "16px",
+    "cardRadiusSm":     "12px",
+    "inputRadius":      "12px",
+    "cardPaddingMobile":"16px",
+    "cardPaddingDesktop":"24px",
+    "navDesktopHeight": "64px",
+    "navMobileHeight":  "56px",
+    "bottomNavHeight":  "68px"
+  },
+  "logo": {
+    "lightSurface":  "files/Branding/10ms-full-logo-color.svg",
+    "darkSurface":   "files/Branding/10ms-icon-logo-white-red..svg",
+    "greenSurface":  "files/Branding/10ms-icon-logo-white.svg",
+    "print":         "files/Branding/10ms-icon-logo-black.svg"
+  }
+}

@@ -1,0 +1,32 @@
+<!-- 10MS Card Variants
+     Flat-by-Default Rule: NO box-shadow at rest. Border separates, not shadow.
+     Hover: shadow + translateY(-2px), 0.2s ease-out.
+     No nested cards. No card-inside-card.
+-->
+
+<!-- Large card (courses, live class) -->
+<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-radius:16px;padding:16px;cursor:pointer;transition:all 0.2s ease-out;">
+  <!-- content -->
+</div>
+<!-- hover: box-shadow:0 4px 16px rgba(0,0,0,0.10); transform:translateY(-2px) -->
+
+<!-- Small card / list item -->
+<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-radius:12px;padding:12px;cursor:pointer;transition:all 0.2s ease-out;">
+  <!-- content -->
+</div>
+
+<!-- Selected card state (with check indicator) -->
+<div style="background:#EAFEF2;border:2px solid #1CAB55;border-radius:16px;padding:16px;">
+  <!-- ph-fill ph-check-circle 24px #1CAB55 at top-right — never a div with border-radius:50% -->
+</div>
+
+<!-- Alert card (error/warning only) -->
+<div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:12px;padding:16px;">
+  <!-- error-red (#DC2626) text/icons only -->
+</div>
+
+<!-- Feature card with blue-tint header (e.g. SuperPrep tier) -->
+<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-radius:16px;overflow:hidden;">
+  <div style="background:#EFF6FF;padding:16px;"><!-- header --></div>
+  <div style="padding:16px;"><!-- body --></div>
+</div>

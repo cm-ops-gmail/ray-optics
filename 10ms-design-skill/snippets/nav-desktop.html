@@ -1,0 +1,39 @@
+<!-- Desktop Top Nav — light surface, Black+Red full lockup logo
+     Rules: surface bg #FFFFFF, 64px height, 1px outline bottom, sh-card shadow
+     Logo: 10ms-full-logo-color.svg scaled to height=30 (width≈109)
+     Active tab: green-link text + 2px primary bottom border
+-->
+<nav style="
+  position:sticky; top:0; z-index:100;
+  background:#FFFFFF; border-bottom:1px solid #E5E7EB;
+  box-shadow:0 1px 3px rgba(0,0,0,0.08); height:64px;
+">
+  <div style="
+    max-width:1200px; margin:0 auto; padding:0 40px;
+    height:100%; display:flex; align-items:center; gap:32px;
+  ">
+    <!-- Logo: Black+Red full lockup — inline SVG from 10ms-full-logo-color.svg -->
+    <a href="#" style="display:flex;align-items:center;text-decoration:none;flex-shrink:0;line-height:0;">
+      <!-- PASTE 10ms-full-logo-color.svg content here, set width="109" height="30" -->
+    </a>
+
+    <!-- Primary nav tabs -->
+    <div style="display:flex;align-items:stretch;height:64px;gap:2px;flex:1;">
+      <a style="display:flex;align-items:center;padding:0 16px;font-family:'Inter',sans-serif;font-size:14px;font-weight:500;color:#149353;text-decoration:none;border-bottom:2px solid #1CAB55;white-space:nowrap;">Active Tab</a>
+      <a style="display:flex;align-items:center;padding:0 16px;font-family:'Inter',sans-serif;font-size:14px;font-weight:500;color:#6B7280;text-decoration:none;border-bottom:2px solid transparent;white-space:nowrap;cursor:pointer;">Inactive Tab</a>
+    </div>
+
+    <!-- Actions: search + bell + avatar -->
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="width:220px;background:#F3F4F6;border:1px solid #E5E7EB;border-radius:999px;padding:8px 14px;font-family:'Inter',sans-serif;font-size:13px;color:#6B7280;display:flex;align-items:center;gap:6px;">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.5" stroke="#6B7280" stroke-width="1.5"/><path d="M9.5 9.5L12 12" stroke="#6B7280" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Search...
+      </div>
+      <div style="width:36px;height:36px;border-radius:50%;border:1px solid #E5E7EB;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+        <!-- Phosphor Bell Regular 20px -->
+        <svg width="20" height="20" viewBox="0 0 256 256" fill="#6B7280"><path d="M221.8,175.94C216.25,166.38,208,139.33,208,104a80,80,0,1,0-160,0c0,35.34-8.26,62.38-13.81,71.94A16,16,0,0,0,48,200H88.81a40,40,0,0,0,78.38,0H208a16,16,0,0,0,13.8-24.06ZM128,216a24,24,0,0,1-22.62-16h45.24A24,24,0,0,1,128,216Z"/></svg>
+      </div>
+      <div style="width:34px;height:34px;border-radius:50%;background:#D0FAD0;display:flex;align-items:center;justify-content:center;font-family:'Inter',sans-serif;font-size:13px;font-weight:700;color:#086347;cursor:pointer;">র</div>
+    </div>
+  </div>
+</nav>

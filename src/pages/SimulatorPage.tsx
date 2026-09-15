@@ -1,0 +1,653 @@
+import { useState, useEffect } from "react";
+import { useSearchParams, useLocation } from "react-router-dom";
+import RayOptics from "@/components/RayOptics";
+import Refraction from "./Refraction";
+import { Sparkles, GraduationCap, Zap, Play, X, ChevronRight, Navigation, MessageCircle, Menu, Info } from "lucide-react";
+import { GuidedTour, TourStep } from "@/components/GuidedTour";
+import { useLang } from "@/context/LangContext";
+
+// The old separate-page "Simulation Learning Journey" (orientation → concept
+// teaching → understanding check, on its own screen before the simulator)
+// has been removed — visitors now land straight on the live simulator. Each
+// mode/simulation now teaches itself in place, via the in-simulator concept
+// onboarding built into RayOptics/Refraction. This key only gates the
+// separate, purely-mechanical "how to use the controls" walkthrough
+// (GuidedTour, strict mode) — kept available as a manual replay only (the
+// "i" button), never auto-started on first visit anymore.
+const ONBOARDING_DONE_KEY_LENS_MIRROR = "ros_onboarding_done_lens_mirror_v2";
+const ONBOARDING_DONE_KEY_REFRACTION = "ros_onboarding_done_refraction_v2";
+
+const SimulatorPage = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  const [showIntro, setShowIntro] = useState(!searchParams.get("mode"));
+  const [isExiting, setIsExiting] = useState(false);
+  const [presetKey, setPresetKey] = useState(0);
+  const [tourActive, setTourActive] = useState(false);
+  const [simGuideActive, setSimGuideActive] = useState(false);
+  const [congratsSignal, setCongratsSignal] = useState(0);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  // True while the child simulator's in-simulator concept onboarding is
+  // running — hides this page's own header/top nav too, so literally
+  // nothing but the live simulator is on screen until the student finishes.
+  const [childOnboardingActive, setChildOnboardingActive] = useState(false);
+
+  const { lang, setLang, t } = useLang();
+
+  // Determine type from search param OR pathname
+  const typeParam = searchParams.get("type");
+  const type = typeParam || (location.pathname.includes("refraction") ? "refraction" : "lens-mirror");
+  const onboardingKeyForType = type === "refraction" ? ONBOARDING_DONE_KEY_REFRACTION : ONBOARDING_DONE_KEY_LENS_MIRROR;
+  // Safety net: if the simulator type changes (e.g. back/forward nav) while
+  // onboarding happened to be active, RayOptics unmounts without a chance
+  // to report itself done — don't leave the header/nav stuck hidden.
+  useEffect(() => { setChildOnboardingActive(false); }, [type]);
+
+  // The mechanical "how to use the controls" walkthrough (GuidedTour, strict
+  // mode) is available on demand only now — the "i" button starts it
+  // manually. It no longer auto-starts on first visit; the in-simulator
+  // concept onboarding (built into RayOptics/Refraction) is what teaches a
+  // first-time visitor now, right on the live simulator.
+  const endSimGuide = (completed: boolean) => {
+    setSimGuideActive(false);
+    try { localStorage.setItem(onboardingKeyForType, "1"); } catch {}
+    if (completed) setCongratsSignal((s) => s + 1);
+  };
+
+  // Tour steps defined inside component to use t()
+  const isMobileNav = typeof window !== "undefined" && window.innerWidth < 768;
+  const LENS_MIRROR_TOUR: TourStep[] = [
+    isMobileNav
+      ? { selector: ".mobile-nav-toggle", requiredSelector: ".mobile-nav-panel", title: t("অপটিক্যাল উপাদান", "Optical Elements"), desc: t("এখানে ট্যাপ করে মেনু খুলুন, তারপর চার ধরনের উপাদানের যেকোনো একটি বেছে নিন — উত্তল লেন্স, অবতল লেন্স, উত্তল দর্পণ বা অবতল দর্পণ।", "Tap here to open the menu, then choose any of the four types — Convex Lens, Concave Lens, Convex Mirror or Concave Mirror."), waitForClick: true }
+      : { selector: ".tabs", title: t("অপটিক্যাল উপাদান", "Optical Elements"), desc: t("চার ধরনের উপাদান আছে — উত্তল লেন্স, অবতল লেন্স, উত্তল দর্পণ ও অবতল দর্পণ। যেকোনো একটি ক্লিক করুন।", "There are four types — Convex Lens, Concave Lens, Convex Mirror & Concave Mirror. Click any one."), waitForClick: true },
+    { selector: ".canvas-wrap", title: t("সিমুলেশন ক্যানভাস", "Simulation Canvas"), desc: t("এখানে রশ্মি চিত্র দেখা যাবে। মোমবাতিটি ধরে যেকোনো দিকে টেনে সরাতে পারবেন।", "Ray diagrams appear here. Grab the candle and drag it in any direction.") },
+    { selector: ".light-btn", title: t("আলো বাটন", "Light Button"), desc: t("এই বাটনে ক্লিক করুন — মোমবাতি জ্বলবে এবং আলোর রশ্মি চিত্র দেখা যাবে।", "Click this button — the candle will light up and ray diagrams will appear."), waitForClick: true },
+    { selector: ".ctrl-toggle-switch", title: t("সব রশ্মি টগল", "All Rays Toggle"), desc: t("এই টগলটি চালু করুন — সব দিক থেকে অনেক রশ্মি একসাথে দেখাবে!", "Turn on this toggle — many rays from all directions will appear at once!"), waitForClick: true },
+    { selector: ".slider-row", title: t("দূরত্ব স্লাইডার", "Distance Sliders"), desc: t("এই স্লাইডার দিয়ে বস্তুর দূরত্ব (u) এবং ফোকাস দূরত্ব (f) পরিবর্তন করুন। প্রতিবিম্ব কীভাবে বদলায় দেখুন!", "Use these sliders to change object distance (u) and focal length (f). Watch how the image changes!") },
+    { selector: ".presets", title: t("অবস্থান প্রিসেট", "Position Presets"), desc: t("F ও 2F-এর মতো বিশেষ অবস্থানে মোমবাতি নিয়ে যান — যেকোনো একটি ক্লিক করুন।", "Jump the candle to special positions like F and 2F — click any one."), waitForClick: true },
+    { selector: ".formula-card", title: t("সূত্র ও গণনা", "Formula & Calculation"), desc: t("এখানে লেন্স বা দর্পণের সূত্র এবং বর্তমান মানগুলো দিয়ে হিসাব দেখা যাবে।", "See the lens or mirror formula and live calculations with current values.") },
+    { selector: ".goto-usecase-btn", title: t("ব্যবহার (Use Case)", "Use Cases"), desc: t("এই বাটনে ক্লিক করলে বাস্তব জীবনে এই লেন্স বা দর্পণের ব্যবহার দেখা যাবে — যেমন চোখের চশমা, টেলিস্কোপ ইত্যাদি।", "Click this button to see real-world applications — like eyeglasses, telescopes, etc."), waitForClick: true },
+    { selector: ".usecase-modal-card", title: t("ব্যবহারের উদাহরণ", "Use Case Examples"), desc: t("এখানে বিভিন্ন বাস্তব ব্যবহারের অ্যানিমেশন দেখা যাবে। যেকোনো কার্ডে ক্লিক করুন।", "Animations of real-world applications appear here. Click any card.") },
+    { selector: ".lab-test-btn", title: t("অ্যাসেসমেন্ট", "Assessment"), desc: t("৫টি প্রশ্নে অংশ নিয়ে পয়েন্ট অর্জন করুন এবং আপনার বোঝাপড়া যাচাই করুন!", "Join a 5-question assessment, earn points and test your understanding!") },
+  ];
+
+  const REFRACTION_TOUR: TourStep[] = [
+    isMobileNav
+      ? { selector: ".mobile-nav-toggle", requiredSelector: ".mobile-nav-panel", title: t("পরীক্ষা নির্বাচন", "Select Experiment"), desc: t("এখানে ট্যাপ করে মেনু খুলুন, তারপর তিনটি পরীক্ষার যেকোনো একটি বেছে নিন — কাঁচের স্ল্যাব, প্রিজম (বিচ্ছুরণ) বা পানিতে লাঠি।", "Tap here to open the menu, then choose any of the three experiments — Glass Slab, Prism (Dispersion) or Stick in Water."), waitForClick: true }
+      : { selector: "#ref-tabs", title: t("পরীক্ষা নির্বাচন", "Select Experiment"), desc: t("তিনটি পরীক্ষা আছে: কাঁচের স্ল্যাব, প্রিজম (বিচ্ছুরণ) এবং পানিতে লাঠি। যেকোনো একটি ট্যাবে ক্লিক করুন।", "Three experiments: Glass Slab, Prism (Dispersion) and Stick in Water. Click any tab."), waitForClick: true },
+    { selector: ".canvas-wrap", title: t("সিমুলেশন ক্যানভাস", "Simulation Canvas"), desc: t("এখানে আলোর প্রতিসরণের চিত্র দেখা যাবে। কোণ ও মান পরিবর্তন করলে চিত্র সাথে সাথে আপডেট হয়।", "The refraction diagram appears here. Change angles and values to update the diagram instantly.") },
+    { selector: ".anim-btn", title: t("অ্যানিমেশন বাটন", "Animation Button"), desc: t("এই বাটনে ক্লিক করুন — আলোর চলাচল অ্যানিমেশন আকারে দেখা যাবে।", "Click this button — light movement will be shown as an animation."), waitForClick: true },
+    { selector: "#ref-controls", title: t("নিয়ন্ত্রণ প্যানেল", "Control Panel"), desc: t("এখান থেকে আপতন কোণ (i), প্রতিসরণ সূচক (n) এবং অন্যান্য মান স্লাইডার দিয়ে পরিবর্তন করুন।", "Change the angle of incidence (i), refractive index (n) and other values with sliders.") },
+    { selector: ".slider-row", title: t("স্লাইডার", "Sliders"), desc: t("এই স্লাইডারগুলো টেনে কোণ ও প্রতিসরণ সূচক পরিবর্তন করুন — চিত্র সাথে সাথে আপডেট হবে।", "Drag these sliders to change angle and refractive index — the diagram updates instantly.") },
+    { selector: ".formula-card", title: t("সূত্র ও গণনা", "Formula & Calculation"), desc: t("এখানে স্নেলের সূত্র এবং বর্তমান মানগুলো দিয়ে গণনা দেখা যাবে: n₁ sin θ₁ = n₂ sin θ₂", "See Snell's Law and live calculations with current values: n₁ sin θ₁ = n₂ sin θ₂") },
+    { selector: ".lab-test-btn", title: t("অ্যাসেসমেন্ট", "Assessment"), desc: t("৫টি প্রশ্নে অংশ নিয়ে পয়েন্ট অর্জন করুন এবং আপনার বোঝাপড়া যাচাই করুন!", "Join a 5-question assessment, earn points and test your understanding!") },
+  ];
+
+  // "Build a simulation" guide — separate from the Tutorial (UI/UX) walkthrough above.
+  // This one is task-oriented: it walks a first-time user through actually
+  // running a simulation, and blocks progress until each required action is done.
+  const LENS_MIRROR_SIM_GUIDE: TourStep[] = [
+    isMobileNav
+      ? { selector: ".mobile-nav-toggle", requiredSelector: ".mobile-nav-panel", title: t("চলো শুরু করি", "Let's Get Started"), desc: t("এখানে ট্যাপ করে মেনু খুলো, তারপর একটি লেন্স বা দর্পণ বেছে নাও — চলো একসাথে প্রথম সিমুলেশনটি তৈরি করি।", "Tap here to open the menu, then choose a lens or mirror — let's build your first simulation together."), waitForClick: true }
+      : { selector: ".tabs", title: t("চলো শুরু করি", "Let's Get Started"), desc: t("একটি লেন্স বা দর্পণ বেছে নাও — চলো একসাথে প্রথম সিমুলেশনটি তৈরি করি।", "Choose a lens or mirror — let's build your first simulation together."), waitForClick: true },
+    { selector: ".light-btn", title: t("আলো জ্বালাও", "Turn On the Light"), desc: t("এবার এই বাটনে ক্লিক করে আলো জ্বালাও, যাতে রশ্মিচিত্র দেখা যায়।", "Now click this button to turn on the light so the ray diagram appears."), waitForClick: true },
+    { selector: ".presets", title: t("বস্তু বসাও", "Place the Object"), desc: t("এই প্রিসেটগুলোর একটিতে ক্লিক করে বস্তুটিকে F বা 2F বিন্দুতে নিয়ে যাও, এবং প্রতিবিম্ব কেমন হয় লক্ষ্য করো।", "Click one of these presets to move the object to F or 2F, and see what kind of image forms."), waitForClick: true },
+    { selector: ".slider-row", title: t("মান পরিবর্তন করো", "Fine-tune the Values"), desc: t("চাইলে স্লাইডার টেনে দূরত্ব বদলাও — প্রতিবিম্ব বাস্তব থেকে অভাসী বা ছোট থেকে বড় হয়ে যাবে!", "Feel free to drag the sliders to change distance — watch the image switch between real/virtual or small/large!") },
+    { selector: ".formula-card", title: t("সূত্র ও গণনা", "Formula & Calculation"), desc: t("এখানে তোমার সিমুলেশনের হিসাব ও প্রতিবিম্বের ধরন দেখা যাবে।", "See the calculation and image type for your simulation here.") },
+    { selector: ".learning-action-btn", title: t("লার্নিং আউটকাম দেখো", "Check the Learning Outcome"), desc: t("এই বাটনে ক্লিক করে দেখো তুমি এই সিমুলেশন থেকে কী শিখলে।", "Click this button to see what you learned from this simulation."), waitForClick: true },
+    { selector: ".goto-usecase-btn", title: t("বাস্তব ব্যবহার দেখো", "See the Real-world Use"), desc: t("এই বাটনে ক্লিক করে দেখো এটি বাস্তবে কোথায় ব্যবহৃত হয়।", "Click this button to see where this is used in real life."), waitForClick: true },
+    { selector: ".lab-test-btn", title: t("নিজেকে যাচাই করো", "Test Yourself"), desc: t("সিমুলেশন শেষে এখানে ক্লিক করে একটি \"অ্যাসেসমেন্ট\" দাও — দেখো তুমি কতটা শিখেছ! Finish চাপো — একটি বিশেষ কিছু অপেক্ষা করছে!", "Once you're done experimenting, click here to take an \"Assessment\" — see how much you've learned! Press Finish — something special is waiting for you!") },
+  ];
+
+  const REFRACTION_SIM_GUIDE: TourStep[] = [
+    isMobileNav
+      ? { selector: ".mobile-nav-toggle", requiredSelector: ".mobile-nav-panel", title: t("চলো শুরু করি", "Let's Get Started"), desc: t("এখানে ট্যাপ করে মেনু খুলো, তারপর একটি পরীক্ষা বেছে নাও — চলো একসাথে প্রতিসরণের একটি সিমুলেশন তৈরি করি।", "Tap here to open the menu, then choose an experiment — let's build a refraction simulation together."), waitForClick: true }
+      : { selector: "#ref-tabs", title: t("চলো শুরু করি", "Let's Get Started"), desc: t("একটি পরীক্ষা বেছে নাও — চলো একসাথে প্রতিসরণের একটি সিমুলেশন তৈরি করি।", "Choose an experiment — let's build a refraction simulation together."), waitForClick: true },
+    { selector: ".anim-btn", title: t("অ্যানিমেশন চালাও", "Run the Animation"), desc: t("এবার এই বাটনে ক্লিক করে দেখো আলো কীভাবে বেঁকে যায়।", "Now click this button and see how the light bends."), waitForClick: true },
+    { selector: ".slider-row", title: t("মান পরিবর্তন করো", "Fine-tune the Values"), desc: t("কোণ বা প্রতিসরাঙ্কের স্লাইডার টেনে দেখো আলোর পথ কীভাবে বদলায়।", "Drag the angle or refractive-index sliders and see how the light's path changes.") },
+    { selector: ".formula-card", title: t("সূত্র ও গণনা", "Formula & Calculation"), desc: t("এখানে স্নেলের সূত্র অনুযায়ী হিসাব দেখা যাবে।", "See the calculation using Snell's Law here.") },
+    { selector: ".learning-action-btn", title: t("লার্নিং আউটকাম দেখো", "Check the Learning Outcome"), desc: t("এই বাটনে ক্লিক করে দেখো তুমি এই সিমুলেশন থেকে কী শিখলে।", "Click this button to see what you learned from this simulation."), waitForClick: true },
+    { selector: ".goto-usecase-btn", title: t("কারণ ও ব্যাখ্যা দেখো", "See the Reason & Explanation"), desc: t("এই বাটনে ক্লিক করে দেখো এর পেছনের কারণ কী।", "Click this button to see the reason behind it."), waitForClick: true },
+    { selector: ".lab-test-btn", title: t("নিজেকে যাচাই করো", "Test Yourself"), desc: t("সিমুলেশন শেষে এখানে ক্লিক করে একটি \"অ্যাসেসমেন্ট\" দাও — দেখো তুমি কতটা শিখেছ! Finish চাপো — একটি বিশেষ কিছু অপেক্ষা করছে!", "Once you're done experimenting, click here to take an \"Assessment\" — see how much you've learned! Press Finish — something special is waiting for you!") },
+  ];
+
+  const PRESETS = [
+    {
+      title: t("উত্তল লেন্সের প্রতিবিম্ব", "Convex Lens Image"),
+      desc: t("ফোকাসের ভেতরে বস্তুর বিবর্ধিত চিত্র", "Magnified image of object inside focus"),
+      type: "lens-mirror", mode: "convexLens", params: { u: "50", f: "80" }
+    },
+    {
+      title: t("অবতল লেন্সের প্রতিবিম্ব", "Concave Lens Image"),
+      desc: t("সব সময় অভাসী ও সোজা প্রতিবিম্ব", "Always virtual & erect image"),
+      type: "lens-mirror", mode: "concaveLens", params: { u: "150", f: "80" }
+    },
+    {
+      title: t("প্রিজমে বিচ্ছুরণ", "Prism Dispersion"),
+      desc: t("সাত রঙের আলোর সুন্দর খেলা", "Beautiful play of seven colors of light"),
+      type: "refraction", mode: "prism", params: { angle: "35" }
+    },
+    {
+      title: t("পানিতে লাঠি বাঁকা", "Bent Stick in Water"),
+      desc: t("প্রতিসরণের বাস্তব উদাহরণ", "Real-world example of refraction"),
+      type: "refraction", mode: "stick", params: { n: "1.33" }
+    }
+  ];
+
+  const SIM_NAMES: Record<string, string> = {
+    convexLens: "convex_lens", concaveLens: "concave_lens",
+    convexMirror: "convex_mirror", concaveMirror: "concave_mirror",
+    slab: "glass_slab", prism: "prism", stick: "stick_in_water",
+  };
+  const currentMode = searchParams.get("mode") || (type === "refraction" ? "slab" : "convexLens");
+  const simName = SIM_NAMES[currentMode] || currentMode;
+  const tallyUrl = `https://tally.so/r/RG87VJ?simulation_name=${simName}`;
+
+  const handleTypeChange = (newType: string) => {
+    const params = new URLSearchParams();
+    params.set("type", newType);
+    if (newType === "refraction") {
+      params.set("mode", "slab");
+      params.set("t", "45");
+    } else {
+      params.set("mode", "convexLens");
+    }
+    setSearchParams(params);
+  };
+
+  const LENS_MIRROR_ITEMS = [
+    { mode: "convexLens", label: t("উত্তল লেন্স", "Convex Lens") },
+    { mode: "concaveLens", label: t("অবতল লেন্স", "Concave Lens") },
+    { mode: "convexMirror", label: t("উত্তল দর্পণ", "Convex Mirror") },
+    { mode: "concaveMirror", label: t("অবতল দর্পণ", "Concave Mirror") },
+  ];
+
+  const REFRACTION_ITEMS = [
+    { mode: "slab", label: t("কাঁচের স্ল্যাব", "Glass Slab") },
+    { mode: "prism", label: t("প্রিজম (বিচ্ছুরণ)", "Prism (Dispersion)") },
+    { mode: "stick", label: t("পানিতে লাঠি বাঁকা", "Bent Stick in Water") },
+  ];
+
+  const handleMobileNavSelect = (newType: string, newMode: string) => {
+    const params = new URLSearchParams();
+    params.set("type", newType);
+    params.set("mode", newMode);
+    if (newType === "refraction") params.set("t", "45");
+    setSearchParams(params);
+    setPresetKey((k) => k + 1);
+    setMobileNavOpen(false);
+  };
+
+  const closeIntro = () => {
+    setIsExiting(true);
+    setTimeout(() => { setShowIntro(false); setIsExiting(false); }, 400);
+  };
+
+  const loadPreset = (p: typeof PRESETS[0]) => {
+    const params = new URLSearchParams();
+    params.set("type", p.type);
+    params.set("mode", p.mode);
+    Object.entries(p.params).forEach(([k, v]) => params.set(k, v));
+    setSearchParams(params);
+    setPresetKey(k => k + 1);
+    closeIntro();
+  };
+
+  return (
+    <div className="simulator-page-root">
+      <style>{`
+        @keyframes _tourBtnPulse {
+          0%,100% { box-shadow: 0 2px 10px rgba(232,0,29,0.35); }
+          50%     { box-shadow: 0 2px 10px rgba(232,0,29,0.35), 0 0 0 6px rgba(232,0,29,0.1); }
+        }
+        .tour-btn {
+          background: linear-gradient(135deg, #E8001D, #b91c1c);
+          color: #fff; border: none; border-radius: 50px;
+          padding: 9px 20px; font-weight: 700; font-size: 13px;
+          cursor: pointer; display: flex; align-items: center; gap: 7px;
+          box-shadow: 0 2px 10px rgba(232,0,29,0.35);
+          transition: transform 0.2s cubic-bezier(0.2,0.8,0.2,1), box-shadow 0.2s cubic-bezier(0.2,0.8,0.2,1);
+          font-family: Inter, sans-serif;
+          flex-shrink: 0;
+          animation: _tourBtnPulse 2.8s ease-in-out infinite;
+        }
+        .tour-btn:hover { transform: scale(1.06) translateY(-1px); box-shadow: 0 6px 20px rgba(232,0,29,0.5); animation: none; }
+        .tour-btn:active { transform: scale(0.96); box-shadow: 0 1px 6px rgba(232,0,29,0.3); animation: none; }
+
+        .onboarding-replay-btn {
+          width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+          background: #F3F4F6; border: 1px solid #E5E7EB; color: #6B7280;
+          display: flex; align-items: center; justify-content: center;
+          cursor: pointer; transition: all 0.15s;
+        }
+        .onboarding-replay-btn:hover { background: #E5E7EB; color: #374151; }
+        @media (max-width: 540px) {
+          .onboarding-replay-btn { width: 28px; height: 28px; }
+        }
+
+        /* Language toggle */
+        .lang-toggle {
+          display: flex; align-items: center;
+          background: #F3F4F6; border-radius: 50px;
+          padding: 3px; gap: 2px; flex-shrink: 0;
+          border: 1px solid #D1FAE5;
+        }
+        .lang-opt {
+          padding: 6px 13px; border-radius: 50px; border: none;
+          font-size: 12px; font-weight: 700; cursor: pointer;
+          transition: all 0.18s cubic-bezier(0.2,0.8,0.2,1);
+          font-family: inherit; color: #6B7280; background: transparent;
+          line-height: 1;
+        }
+        .lang-opt.active {
+          background: #1CAB55; color: #fff;
+          box-shadow: 0 2px 8px rgba(28,171,85,0.30);
+        }
+        .lang-opt:not(.active):hover { background: #E5E7EB; color: #374151; }
+        @media (max-width: 540px) {
+          .lang-opt { padding: 5px 10px; font-size: 11px; }
+        }
+
+        .simulator-page-root {
+          background: #F9FAFB; min-height: 100vh; padding: 16px;
+          font-family: 'Hind Siliguri', 'Inter', sans-serif; position: relative;
+        }
+        .central-header {
+          display: flex; justify-content: space-between; align-items: center;
+          padding: 12px 0 24px; max-width: 1216px;
+          margin-left: auto; margin-right: auto; width: 100%; gap: 12px;
+        }
+        .header-logo { height: 44px; width: auto; object-fit: contain; flex-shrink: 0; }
+        .header-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+        @media (max-width: 540px) {
+          .central-header { padding: 12px 0 16px; max-width: none; gap: 8px; }
+          .header-logo { height: 34px; }
+          .header-right { gap: 7px; }
+        }
+        .main-nav-container { max-width: 1216px; margin: 0 auto 16px; }
+        .main-tabs {
+          display: flex; background: #fff; border: 1px solid #E5E7EB;
+          border-radius: 12px; padding: 4px; gap: 6px;
+          box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+        }
+        .main-tab-btn {
+          flex: 1; padding: 8px 20px; border-radius: 9px;
+          border: 1px solid transparent; background: transparent; color: #6B7280;
+          font-weight: 700; font-size: 14px; cursor: pointer;
+          transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+          font-family: inherit; display: flex; align-items: center;
+          justify-content: center; white-space: nowrap;
+        }
+        .main-tab-btn.active {
+          background: #E8001D; color: #fff; border-color: #E8001D;
+          box-shadow: 0 4px 12px rgba(232,0,29,0.25);
+        }
+
+        /* Mobile hamburger nav */
+        .mobile-nav-wrap { display: none; position: relative; }
+        .mobile-nav-toggle {
+          width: 100%; display: flex; align-items: center; justify-content: space-between;
+          background: #fff; border: 1px solid #E5E7EB; border-radius: 16px;
+          padding: 12px 16px; font-weight: 700; font-size: 15px; color: #111827;
+          cursor: pointer; font-family: inherit;
+          box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+        }
+        .mobile-nav-toggle-label { color: #E8001D; }
+        .mobile-nav-backdrop { position: fixed; inset: 0; z-index: 9600; background: transparent; }
+        .mobile-nav-panel {
+          position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 9601;
+          background: #fff; border: 1px solid #E5E7EB; border-radius: 16px;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.14); padding: 8px;
+          max-height: 70vh; overflow-y: auto;
+        }
+        .mobile-nav-group { padding: 6px 4px; }
+        .mobile-nav-group + .mobile-nav-group { border-top: 1px solid #F3F4F6; margin-top: 4px; padding-top: 10px; }
+        .mobile-nav-group-title {
+          font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em;
+          color: #9CA3AF; padding: 6px 10px;
+        }
+        .mobile-nav-group-title.active { color: #E8001D; }
+        .mobile-nav-item {
+          display: block; width: 100%; text-align: left; padding: 10px 14px 10px 20px;
+          border-radius: 10px; border: none; background: transparent; color: #374151;
+          font-weight: 600; font-size: 14px; cursor: pointer; font-family: inherit;
+        }
+        .mobile-nav-item:hover { background: #F9FAFB; }
+        .mobile-nav-item.active { background: #FFF5F6; color: #E8001D; font-weight: 700; }
+
+        @media (max-width: 767px) {
+          .main-tabs { display: none; }
+          .mobile-nav-wrap { display: block; }
+        }
+
+        /* Intro Overlay */
+        .intro-overlay {
+          position: fixed; top:0; left:0; right:0; bottom:0;
+          background: rgba(17,24,39,0.85); backdrop-filter: blur(8px);
+          z-index: 9999; display: flex; align-items: center; justify-content: center;
+          padding: 20px; transition: opacity 0.4s ease;
+        }
+        .intro-overlay.exiting { opacity: 0; pointer-events: none; }
+        .intro-card {
+          background: #fff; width: 100%; max-width: 600px; border-radius: 24px;
+          overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+          animation: slideUp 0.4s cubic-bezier(0.16,1,0.3,1);
+          transition: transform 0.4s cubic-bezier(0.16,1,0.3,1);
+        }
+        .intro-overlay.exiting .intro-card { transform: translateY(-20px); }
+        @keyframes slideUp { from { transform: translateY(40px); opacity:0; } to { transform: translateY(0); opacity:1; } }
+        .intro-header {
+          background: linear-gradient(135deg, #E8001D, #931212);
+          padding: 32px 24px; color: #fff; text-align: center; position: relative;
+        }
+        .close-intro {
+          position: absolute; top:16px; right:16px;
+          background: rgba(255,255,255,0.2); border: none;
+          width: 32px; height: 32px; border-radius: 50%;
+          display: flex; align-items: center; justify-content: center;
+          color: #fff; cursor: pointer;
+        }
+        .intro-title { font-size: 28px; font-weight: 800; margin-bottom: 8px; }
+        .intro-subtitle { font-size: 16px; opacity: 0.9; }
+        .intro-body { padding: 24px; max-height: 70vh; overflow-y: auto; }
+        .feature-list { display: grid; grid-template-columns: 1fr; gap: 16px; margin-bottom: 24px; }
+        @media (min-width: 480px) { .feature-list { grid-template-columns: 1fr 1fr; } }
+        .feature-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px; background: #F9FAFB; border-radius: 16px; }
+        .feature-icon { background: #FFF5F6; padding: 8px; border-radius: 10px; color: #E8001D; flex-shrink: 0; }
+        .feature-text h4 { font-weight: 700; font-size: 14px; margin-bottom: 2px; }
+        .feature-text p { font-size: 12px; color: #6B7280; line-height: 1.4; }
+        .presets-title { font-weight: 800; font-size: 18px; margin-bottom: 12px; color: #111827; }
+        .presets-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+        @media (min-width: 480px) { .presets-grid { grid-template-columns: 1fr 1fr; } }
+        .preset-btn {
+          text-align: left; padding: 16px; border: 1px solid #E5E7EB; border-radius: 16px;
+          background: #fff; cursor: pointer; transition: all 0.2s;
+          display: flex; flex-direction: column; gap: 4px;
+        }
+        .preset-btn:hover { border-color: #E8001D; background: #FFF5F6; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(232,0,29,0.1); }
+        .preset-name { font-weight: 700; font-size: 14px; color: #111827; }
+        .preset-desc { font-size: 12px; color: #6B7280; }
+        .start-btn {
+          width: 100%; margin-top: 24px; padding: 16px;
+          background: #E8001D; color: #fff; border: none; border-radius: 16px;
+          font-weight: 800; font-size: 16px; cursor: pointer;
+          display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+
+        @media (max-width: 480px) {
+          .simulator-page-root { padding: 12px 8px; }
+          .main-tab-btn { font-size: 14px; padding: 10px 8px; }
+          .intro-title { font-size: 24px; }
+        }
+
+        /* Feedback FAB */
+        .feedback-fab {
+          position: fixed; bottom: 28px; right: 24px; z-index: 7500;
+          display: flex; align-items: center; gap: 7px;
+          background: rgba(255,255,255,0.92); backdrop-filter: blur(10px);
+          border: 1px solid rgba(0,0,0,0.1); border-radius: 50px;
+          padding: 10px 16px 10px 13px; color: #374151;
+          font-size: 13px; font-weight: 600; cursor: pointer;
+          box-shadow: 0 2px 14px rgba(0,0,0,0.11);
+          transition: transform 0.18s cubic-bezier(0.2,0.8,0.2,1), box-shadow 0.18s, background 0.15s;
+          font-family: inherit;
+        }
+        .feedback-fab:hover { background: #fff; box-shadow: 0 6px 24px rgba(0,0,0,0.17); transform: translateY(-2px); }
+        .feedback-fab:active { transform: scale(0.96); }
+        .feedback-fab-label { white-space: nowrap; }
+        @media (max-width: 540px) {
+          .feedback-fab { bottom: 18px; right: 16px; padding: 11px; border-radius: 50%; }
+          .feedback-fab-label { display: none; }
+        }
+
+        /* Feedback Modal */
+        @keyframes _fdBdIn { from { opacity:0; } to { opacity:1; } }
+        @keyframes _fdCardIn { from { transform: translateY(28px); opacity:0; } to { transform: translateY(0); opacity:1; } }
+        .feedback-modal-bd {
+          position: fixed; inset: 0; background: rgba(17,24,39,0.65);
+          backdrop-filter: blur(5px); z-index: 9980;
+          display: flex; align-items: center; justify-content: center;
+          padding: 16px; animation: _fdBdIn 0.22s ease-out;
+        }
+        .feedback-modal-card {
+          background: #fff; border-radius: 20px; overflow: hidden;
+          width: 100%; max-width: 560px; height: min(82vh, 660px);
+          display: flex; flex-direction: column;
+          box-shadow: 0 25px 60px rgba(0,0,0,0.22);
+          animation: _fdCardIn 0.28s cubic-bezier(0.16,1,0.3,1);
+        }
+        .feedback-modal-hdr {
+          display: flex; justify-content: space-between; align-items: center;
+          padding: 14px 18px; border-bottom: 1px solid #F3F4F6; flex-shrink: 0;
+        }
+        .feedback-modal-hdr span { font-weight: 700; font-size: 15px; color: #111827; font-family: inherit; }
+        .feedback-modal-hdr button {
+          background: none; border: none; cursor: pointer; color: #9CA3AF;
+          padding: 5px; border-radius: 7px; display: flex; align-items: center;
+          transition: color 0.15s, background 0.15s;
+        }
+        .feedback-modal-hdr button:hover { color: #374151; background: #F3F4F6; }
+        .feedback-iframe { flex: 1; width: 100%; border: none; display: block; }
+        @media (max-width: 540px) {
+          .feedback-modal-bd { padding: 0; align-items: flex-end; }
+          .feedback-modal-card { border-radius: 20px 20px 0 0; height: 90vh; max-width: 100%; }
+        }
+      `}</style>
+
+      {showIntro && (
+        <div className={`intro-overlay ${isExiting ? 'exiting' : ''}`}>
+          <div className="intro-card">
+            <div className="intro-header">
+              <button className="close-intro" onClick={closeIntro}><X size={18}/></button>
+              <div className="intro-title">{t("আলোর রহস্য উন্মোচন করো!", "Uncover the Mystery of Light!")}</div>
+              <div className="intro-subtitle">{t("লেন্স, দর্পণ ও প্রতিসরণ — নিজে পরীক্ষা করে শেখো", "Lenses, Mirrors & Refraction — Learn by Experimenting Yourself")}</div>
+            </div>
+            <div className="intro-body">
+              <div className="presets-title">{t("কি কি করা যাবে?", "What can you do?")}</div>
+              <div className="feature-list">
+                <div className="feature-item">
+                  <div className="feature-icon"><Zap size={20}/></div>
+                  <div className="feature-text">
+                    <h4>{t("রশ্মি চিত্র পর্যবেক্ষণ", "Observe Ray Diagrams")}</h4>
+                    <p>{t("লেন্স ও দর্পণে আলোর গতিপথ সরাসরি দেখুন", "See the path of light through lenses and mirrors live")}</p>
+                  </div>
+                </div>
+                <div className="feature-item">
+                  <div className="feature-icon"><GraduationCap size={20}/></div>
+                  <div className="feature-text">
+                    <h4>{t("প্রতিবিম্বের বৈশিষ্ট্য", "Image Properties")}</h4>
+                    <p>{t("বাস্তব, অভাসী, সোজা বা উল্টো প্রতিবিম্ব বুঝুন", "Understand real, virtual, erect or inverted images")}</p>
+                  </div>
+                </div>
+                <div className="feature-item">
+                  <div className="feature-icon"><Sparkles size={20}/></div>
+                  <div className="feature-text">
+                    <h4>{t("আলোর বিচ্ছুরণ", "Light Dispersion")}</h4>
+                    <p>{t("প্রিজমে সাদা আলোর সাতটি রঙে ভাগ হওয়া দেখুন", "See white light split into seven colors through a prism")}</p>
+                  </div>
+                </div>
+                <div className="feature-item">
+                  <div className="feature-icon"><Play size={20}/></div>
+                  <div className="feature-text">
+                    <h4>{t("বাস্তব উদাহরণ", "Real-world Examples")}</h4>
+                    <p>{t("গ্লাসে লাঠি বাঁকা বা মেকআপ আয়নার কাজ বুঝুন", "Understand bent stick in water or how a makeup mirror works")}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="presets-title">{t("দ্রুত শুরু করুন (Presets)", "Quick Start (Presets)")}</div>
+              <div className="presets-grid">
+                {PRESETS.map((p, i) => (
+                  <button key={i} className="preset-btn" onClick={() => loadPreset(p)}>
+                    <div className="preset-name">{p.title}</div>
+                    <div className="preset-desc">{p.desc}</div>
+                  </button>
+                ))}
+              </div>
+
+              <button className="start-btn" onClick={closeIntro}>
+                {t("সরাসরি সিমুলেশন শুরু করি", "Start Simulation Directly")} <ChevronRight size={20}/>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!childOnboardingActive && (
+      <>
+      <header className="central-header">
+        <img src="https://cdn.10minuteschool.com/images/svg/Origin%20Labs%20Black.svg" alt="10 Minute School" className="header-logo" />
+        <div className="header-right">
+          {/* Language toggle */}
+          <div className="lang-toggle" role="group" aria-label="Language">
+            <button
+              className={`lang-opt ${lang === "bn" ? "active" : ""}`}
+              onClick={() => setLang("bn")}
+            >বাং</button>
+            <button
+              className={`lang-opt ${lang === "en" ? "active" : ""}`}
+              onClick={() => setLang("en")}
+            >EN</button>
+          </div>
+          {/* Replay the "build a simulation" guide */}
+          <button
+            className="onboarding-replay-btn"
+            onClick={() => { setShowIntro(false); setSimGuideActive(true); }}
+            aria-label={t("সিমুলেশন গাইড আবার দেখুন", "Replay simulation guide")}
+            title={t("সিমুলেশন গাইড আবার দেখুন", "Replay simulation guide")}
+          >
+            <Info size={16} />
+          </button>
+          {/* Tutorial button */}
+          <button
+            id="guided-tour-btn"
+            className="tour-btn"
+            onClick={() => { setShowIntro(false); setTourActive(true); }}
+          >
+            <Navigation size={14} />
+            Tutorial
+          </button>
+        </div>
+      </header>
+
+      <div className="main-nav-container">
+        <div className="main-tabs">
+          <button
+            className={`main-tab-btn ${type === "lens-mirror" ? "active" : ""}`}
+            onClick={() => handleTypeChange("lens-mirror")}
+          >
+            {t("লেন্স ও দর্পণ", "Lenses & Mirrors")}
+          </button>
+          <button
+            className={`main-tab-btn ${type === "refraction" ? "active" : ""}`}
+            onClick={() => handleTypeChange("refraction")}
+          >
+            {t("আলোর প্রতিসরণ", "Light Refraction")}
+          </button>
+        </div>
+
+        <div className="mobile-nav-wrap">
+          <button
+            className="mobile-nav-toggle"
+            onClick={() => setMobileNavOpen((o) => !o)}
+            aria-expanded={mobileNavOpen}
+            aria-label="Toggle navigation menu"
+          >
+            <span className="mobile-nav-toggle-label">
+              {type === "refraction" ? t("আলোর প্রতিসরণ", "Light Refraction") : t("লেন্স ও দর্পণ", "Lenses & Mirrors")}
+            </span>
+            {mobileNavOpen ? <X size={18} /> : <Menu size={18} />}
+          </button>
+
+          {mobileNavOpen && (
+            <>
+              <div className="mobile-nav-backdrop" onClick={() => setMobileNavOpen(false)} />
+              <div className="mobile-nav-panel">
+                <div className="mobile-nav-group">
+                  <div className={`mobile-nav-group-title ${type === "lens-mirror" ? "active" : ""}`}>
+                    {t("লেন্স ও দর্পণ", "Lenses & Mirrors")}
+                  </div>
+                  {LENS_MIRROR_ITEMS.map((item) => (
+                    <button
+                      key={item.mode}
+                      className={`mobile-nav-item ${type === "lens-mirror" && currentMode === item.mode ? "active" : ""}`}
+                      onClick={() => handleMobileNavSelect("lens-mirror", item.mode)}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="mobile-nav-group">
+                  <div className={`mobile-nav-group-title ${type === "refraction" ? "active" : ""}`}>
+                    {t("আলোর প্রতিসরণ", "Light Refraction")}
+                  </div>
+                  {REFRACTION_ITEMS.map((item) => (
+                    <button
+                      key={item.mode}
+                      className={`mobile-nav-item ${type === "refraction" && currentMode === item.mode ? "active" : ""}`}
+                      onClick={() => handleMobileNavSelect("refraction", item.mode)}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+      </>
+      )}
+
+      <div className="simulator-content">
+        {type === "refraction" ? (
+          <Refraction key={`refraction-${presetKey}`} hideNav celebrateSignal={congratsSignal} />
+        ) : (
+          <RayOptics key={`rayoptics-${presetKey}`} hideNav celebrateSignal={congratsSignal} onConceptOnboardingChange={setChildOnboardingActive} />
+        )}
+      </div>
+
+      {/* Feedback FAB */}
+      {!showIntro && !tourActive && (
+        <button className="feedback-fab" onClick={() => setFeedbackOpen(true)} aria-label={t("মতামত জানাও", "Give Feedback")}>
+          <MessageCircle size={17} />
+          <span className="feedback-fab-label">{t("তোমার মতামত জানাও", "Share Your Feedback")}</span>
+        </button>
+      )}
+
+      {/* Feedback Modal */}
+      {feedbackOpen && (
+        <div className="feedback-modal-bd" onClick={() => setFeedbackOpen(false)}>
+          <div className="feedback-modal-card" onClick={e => e.stopPropagation()}>
+            <div className="feedback-modal-hdr">
+              <span>{t("তোমার মতামত জানাও", "Share Your Feedback")}</span>
+              <button onClick={() => setFeedbackOpen(false)} aria-label={t("বন্ধ করো", "Close")}><X size={17} /></button>
+            </div>
+            <iframe src={tallyUrl} className="feedback-iframe" title="Feedback Form" allow="fullscreen" />
+          </div>
+        </div>
+      )}
+
+      {/* Tutorial button — plain UI/UX walkthrough, unchanged from before */}
+      <GuidedTour
+        steps={type === "refraction" ? REFRACTION_TOUR : LENS_MIRROR_TOUR}
+        started={tourActive}
+        onEnd={() => setTourActive(false)}
+        lang={lang}
+      />
+
+      {/* "i" button + first-visit auto-start — goal-oriented, blocks until each step is done */}
+      <GuidedTour
+        steps={type === "refraction" ? REFRACTION_SIM_GUIDE : LENS_MIRROR_SIM_GUIDE}
+        started={simGuideActive}
+        onEnd={endSimGuide}
+        lang={lang}
+        strict
+        keepVisible=".canvas-wrap"
+      />
+    </div>
+  );
+};
+
+export default SimulatorPage;
