@@ -1880,6 +1880,21 @@ export default function RayOptics({ hideNav = false, celebrateSignal, onConceptO
                       {conceptSelectedIdx === conceptIdentifyCorrectIdx ? t("সঠিক!", "Correct!") : t("ভুল উত্তর", "Wrong answer")}
                     </div>
                     <div className="explain-card-v2 concept-explain">
+                      {conceptSelectedIdx !== null && conceptSelectedIdx !== conceptIdentifyCorrectIdx && (
+                        <div className="identify-compare">
+                          <div className="identify-compare-item wrong">
+                            <ShapeIcon shape={MODES[conceptSelectedIdx].id} />
+                            <span className="identify-compare-label bn">{t("তুমি বলেছো", "You said")}</span>
+                            <span className="identify-compare-name bn">{t(IDENTIFY_OPTIONS[conceptSelectedIdx].bn, IDENTIFY_OPTIONS[conceptSelectedIdx].en)}</span>
+                          </div>
+                          <ChevronRight className="identify-compare-arrow" size={18} />
+                          <div className="identify-compare-item correct">
+                            <ShapeIcon shape={mode} />
+                            <span className="identify-compare-label bn">{t("আসলে এটা", "It's actually")}</span>
+                            <span className="identify-compare-name bn">{t(IDENTIFY_OPTIONS[conceptIdentifyCorrectIdx].bn, IDENTIFY_OPTIONS[conceptIdentifyCorrectIdx].en)}</span>
+                          </div>
+                        </div>
+                      )}
                       <p className="explain-body bn">{t(IDENTIFY_EXPLAIN[mode].bn, IDENTIFY_EXPLAIN[mode].en)}</p>
                     </div>
                   </>
@@ -2063,6 +2078,34 @@ function getUseCaseMeta(uc: { icon: string; title: string; desc: string }, t: (b
     : uc.icon === "equal" ? t("বস্তুর সমান আকারের উল্টো ছবি", "Equal-size inverted image of the object")
     : uc.desc;
   return { title, desc };
+}
+
+// Small at-a-glance shape icon for each of the 4 modes — used in the
+// concept-onboarding identify step to show "you said [shape] → it's
+// actually [shape]" instead of naming things in text only.
+function ShapeIcon({ shape, size = 34 }: { shape: Mode; size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 34 34" className="shape-icon">
+      {shape === "convexLens" && (
+        <path d="M17,3 Q26,17 17,31 Q8,17 17,3 Z" fill="rgba(120,180,255,0.18)" stroke="currentColor" strokeWidth="2.2" />
+      )}
+      {shape === "concaveLens" && (
+        <path d="M11,3 Q17,17 11,31 M23,3 Q17,17 23,31" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+      )}
+      {shape === "convexMirror" && (
+        <>
+          <path d="M11,4 Q23,17 11,30" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+          <path d="M6,5 Q17,17 6,29" fill="none" stroke="currentColor" strokeWidth="1.5" strokeDasharray="2,2" opacity="0.5" />
+        </>
+      )}
+      {shape === "concaveMirror" && (
+        <>
+          <path d="M23,4 Q11,17 23,30" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+          <path d="M28,5 Q17,17 28,29" fill="none" stroke="currentColor" strokeWidth="1.5" strokeDasharray="2,2" opacity="0.5" />
+        </>
+      )}
+    </svg>
+  );
 }
 
 function UseCaseAnimationModal({
@@ -3364,6 +3407,18 @@ input[type="range"]:focus { outline: none; }
 .concept-onboard-panel .concept-explain { margin: 4px 0 10px; padding: 12px; animation: fadeSlideIn 0.35s ease-out; }
 .concept-onboard-panel .concept-explain .explain-body { font-size: 13px; line-height: 1.6; }
 .concept-onboard-panel .quiz-feedback { animation: fadeSlideIn 0.3s ease-out; }
+.identify-compare { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px; }
+.identify-compare-item { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 1; padding: 8px 4px; border-radius: 10px; }
+.identify-compare-item .shape-icon { color: var(--gray-600); }
+.identify-compare-item.wrong { background: var(--c-alert-surface); }
+.identify-compare-item.wrong .shape-icon { color: var(--c-error); }
+.identify-compare-item.correct { background: var(--c-primary-container); }
+.identify-compare-item.correct .shape-icon { color: var(--c-on-primary-container); }
+.identify-compare-label { font-size: 10px; color: var(--gray-500); }
+.identify-compare-name { font-size: 12px; font-weight: 700; }
+.identify-compare-item.wrong .identify-compare-name { color: var(--c-error); }
+.identify-compare-item.correct .identify-compare-name { color: var(--c-on-primary-container); }
+.identify-compare-arrow { flex-shrink: 0; color: var(--gray-400, #9CA3AF); }
 @media (max-width: 767px) {
   .outcome-action-btn { width: 36px; min-height: 36px; border-radius: 10px; }
 }
