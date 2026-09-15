@@ -1652,7 +1652,7 @@ export default function RayOptics({ hideNav = false, celebrateSignal, onConceptO
       </div>
       )}
 
-      <div className="experiment-row">
+      <div className={"experiment-row" + (showConceptOnboarding ? " onboarding-fullscreen" : "")}>
         <div className="experiment-canvas">
           <div className="ro-card canvas-card">
             <div className="canvas-wrap" ref={containerRef}>
@@ -3261,6 +3261,22 @@ const styles = `
 .ro-card { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 10px; }
 .experiment-row { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
 @media (min-width: 768px) { .experiment-row { flex-direction: row; } }
+/* Concept onboarding takes over as its own full-screen "page" — a popup
+   with a proper entrance animation — rather than sitting inline in the
+   normal layout. Same simulation screen inside it, just presented as a
+   distinct animated overlay until the student finishes all 4 steps. */
+@keyframes onboardingPageIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+.experiment-row.onboarding-fullscreen {
+  position: fixed; inset: 0; z-index: 500; background: var(--bg);
+  overflow-y: auto; margin: 0; padding: 16px;
+  display: flex; flex-direction: column; justify-content: center;
+  animation: onboardingPageIn 0.4s cubic-bezier(0.16,1,0.3,1);
+}
+@media (min-width: 768px) { .experiment-row.onboarding-fullscreen { flex-direction: column; padding: 32px; } }
+.experiment-row.onboarding-fullscreen .experiment-canvas { flex: 0 1 auto; width: 100%; max-width: 520px; margin: 0 auto; }
 .experiment-canvas { flex: 1; min-width: 0; }
 .canvas-card { padding: 8px; }
 .tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
