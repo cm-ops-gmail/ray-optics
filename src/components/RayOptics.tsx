@@ -1214,7 +1214,12 @@ export default function RayOptics({ hideNav = false, celebrateSignal, onConceptO
       // off-canvas on demand instead of a permanent side panel, so the
       // simulation itself can take up more of the screen.
       const ratio = w < 480 ? 1.35 : w < 768 ? 0.9 : 0.65;
-      const cssH = Math.max(400, Math.round(w * ratio));
+      let cssH = Math.max(400, Math.round(w * ratio));
+      // In the side-by-side onboarding popup, the canvas wrapper is a
+      // stretched flex item with real vertical room to spare — fill it
+      // instead of leaving dead space below a width-only-sized canvas.
+      const availH = container.offsetHeight;
+      if (availH > cssH + 20) cssH = availH;
       canvas.style.width = w + "px";
       canvas.style.height = cssH + "px";
       canvas.width = w * dpr;
@@ -3304,10 +3309,15 @@ const styles = `
    use of the extra desktop space. */
 @media (min-width: 900px) {
   .onboarding-modal-shell {
-    flex-direction: row; align-items: flex-start; max-width: 900px; padding: 24px;
+    flex-direction: row; align-items: stretch;
+    width: 92vw; max-width: 1280px; height: 90vh; max-height: 90vh; padding: 28px;
   }
-  .onboarding-modal-shell > .ro-card.canvas-card { flex: 1 1 46%; min-width: 0; }
-  .onboarding-modal-shell > .concept-onboard-card { flex: 1 1 54%; min-width: 0; align-self: stretch; }
+  .onboarding-modal-shell > .ro-card.canvas-card { flex: 1 1 48%; min-width: 0; display: flex; flex-direction: column; }
+  .onboarding-modal-shell > .ro-card.canvas-card .canvas-wrap { flex: 1; }
+  .onboarding-modal-shell > .concept-onboard-card {
+    flex: 1 1 52%; min-width: 0; align-self: stretch;
+    display: flex; flex-direction: column; justify-content: center; overflow-y: auto;
+  }
 }
 .experiment-canvas { flex: 1; min-width: 0; }
 .canvas-card { padding: 8px; }
