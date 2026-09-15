@@ -533,11 +533,30 @@ export default function RayOptics({ hideNav = false, celebrateSignal, onConceptO
   // trigger onboarding again for a different mode.
   const conceptKey = () => `ros_concept_onboarding_done_v1`;
   const [showConceptOnboarding, setShowConceptOnboarding] = useState(false);
+  // A quick yes/no gate before the actual steps: "already know what a lens
+  // and mirror are?" — "yes" skips straight to the identify question,
+  // "no" first shows a one-screen gallery of all 4 shapes with a plain
+  // explanation before continuing into the same steps.
+  const [onboardGate, setOnboardGate] = useState<"pending" | "explain" | "quiz">("pending");
+  const [conceptPanelMinimized, setConceptPanelMinimized] = useState(false);
   const [conceptStep, setConceptStep] = useState(0); // 0 = identify, 1 = prediction MCQ, 2-3 = placement tasks
   const [conceptSelectedIdx, setConceptSelectedIdx] = useState<number | null>(null); // steps 0 & 1 only
   const [conceptChecked, setConceptChecked] = useState(false); // steps 0/1: answer checked; steps 2/3: task achieved
   const [conceptMcq, setConceptMcq] = useState<OnboardMcq | null>(null);
   const [conceptTasks, setConceptTasks] = useState<PlacementTask[]>([]);
+  // Desktop gets a big bounded popup with canvas + question side-by-side;
+  // mobile instead gets a small floating card over the (normally laid out)
+  // canvas, same as the Lab Test quiz panel — never a screen-blocking modal
+  // on a small screen.
+  const [isWideOnboarding, setIsWideOnboarding] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(min-width: 900px)").matches
+  );
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 900px)");
+    const handler = (e: MediaQueryListEvent) => setIsWideOnboarding(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
   const conceptStartedRef = useRef<Set<Mode>>(new Set());
   useEffect(() => {
     if (conceptStartedRef.current.has(mode)) return;
@@ -553,6 +572,8 @@ export default function RayOptics({ hideNav = false, celebrateSignal, onConceptO
     setConceptStep(0);
     setConceptSelectedIdx(null);
     setConceptChecked(false);
+    setOnboardGate("pending");
+    setConceptPanelMinimized(false);
     setLightOn(false);
     setAnimProgress(0);
     // Start every mode's onboarding from a neutral position (right at F) —
@@ -599,6 +620,13 @@ export default function RayOptics({ hideNav = false, celebrateSignal, onConceptO
     setConceptStep((s) => s + 1);
     setConceptSelectedIdx(null);
     setConceptChecked(false);
+  };
+  // Lets a student bail out of the whole walkthrough at any point (gate,
+  // shape gallery, or any of the 4 steps) via a close/X button — same
+  // one-time-done flag as finishing normally, so it doesn't come back.
+  const skipConceptOnboarding = () => {
+    try { localStorage.setItem(conceptKey(), "1"); } catch {}
+    setShowConceptOnboarding(false);
   };
   // After the two hands-on placement tasks (steps 2 & 3) — once the student
   // has dragged the candle in and seen the live explanation — chain into
@@ -1230,7 +1258,7 @@ export default function RayOptics({ hideNav = false, celebrateSignal, onConceptO
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, [showConceptOnboarding]);
+  }, [showConceptOnboarding, isWideOnboarding]);
 
   // Resize use case canvas
   useEffect(() => {
@@ -1725,15 +1753,66 @@ export default function RayOptics({ hideNav = false, celebrateSignal, onConceptO
             </div>
           );
         }
-        // Onboarding: canvas + the question card live together inside one
-        // contained, centered popup (with a dimmed backdrop) instead of
-        // the canvas going edge-to-edge and the question floating separately.
-        return (
+
+        const skipBtn = (
+          <button
+            className="onboarding-skip-btn"
+            onClick={skipConceptOnboarding}
+            aria-label={t("এড়িয়ে যাও", "Skip")}
+            title={t("এড়িয়ে যাও", "Skip this walkthrough")}
+          >
+            <X size={16} />
+          </button>
+        );
+
+        const questionCardInner = (
           <>
-            <div className="onboarding-modal-backdrop" />
-            <div className="onboarding-modal-shell">
-              {canvasCardContent}
-              <div className="ro-card quiz-card concept-onboard-card" key={conceptStep}>
+            {onboardGate === "pending" && (
+              <>
+                <div className="quiz-header">
+                  <span className="quiz-icon"><GraduationCap size={22} /></span>
+                  <span className="quiz-round bn">{t("শুরু করার আগে", "Before we start")}</span>
+                </div>
+                <div className="quiz-question bn">
+                  {t("লেন্স ও দর্পণ কী — এটা কি তুমি আগে থেকেই জানো?", "Do you already know what a lens and a mirror are?")}
+                </div>
+                <div className="gate-btn-row">
+                  <button className="predict-start-btn" onClick={() => setOnboardGate("quiz")}>
+                    {t("হ্যাঁ, জানি", "Yes, I know")}
+                  </button>
+                  <button className="predict-start-btn secondary" onClick={() => setOnboardGate("explain")}>
+                    {t("না, জানি না", "No, I don't")}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {onboardGate === "explain" && (
+              <>
+                <div className="quiz-header">
+                  <span className="quiz-icon"><GraduationCap size={22} /></span>
+                  <span className="quiz-round bn">{t("পরিচিতি", "Introduction")}</span>
+                </div>
+                <div className="quiz-question bn">
+                  {t("চলো দেখে নিই — লেন্স ও দর্পণের ৪টি ধরন:", "Let's take a look — the 4 types of lenses & mirrors:")}
+                </div>
+                <div className="shape-gallery">
+                  {MODES.map((m, i) => (
+                    <div className="shape-gallery-item" key={m.id}>
+                      <ShapeIcon shape={m.id} size={36} />
+                      <div className="shape-gallery-name bn">{t(IDENTIFY_OPTIONS[i].bn, IDENTIFY_OPTIONS[i].en)}</div>
+                      <div className="shape-gallery-desc bn">{t(IDENTIFY_EXPLAIN[m.id].bn, IDENTIFY_EXPLAIN[m.id].en)}</div>
+                    </div>
+                  ))}
+                </div>
+                <button className="predict-start-btn" onClick={() => setOnboardGate("quiz")}>
+                  {t("বুঝেছি, শুরু করি →", "Got it, let's start →")}
+                </button>
+              </>
+            )}
+
+            {onboardGate === "quiz" && (
+              <>
                 <div className="quiz-header">
                   <span className="quiz-icon"><GraduationCap size={22} /></span>
                   <span className="quiz-round bn">{t("ধাপ", "Step")} {toNum(conceptStep + 1)}/{toNum(4)}</span>
@@ -1873,6 +1952,62 @@ export default function RayOptics({ hideNav = false, celebrateSignal, onConceptO
                     {t("বাস্তব উদাহরণ দেখো →", "See a real-world example →")}
                   </button>
                 )}
+              </>
+            )}
+          </>
+        );
+
+        if (!isWideOnboarding) {
+          // Mobile: canvas stays in its normal spot at full size; the
+          // question floats over it as a small, minimizable card — same
+          // pattern as the Lab Test quiz panel — instead of a screen-
+          // blocking modal.
+          return (
+            <>
+              <div className="experiment-row">
+                <div className="experiment-canvas">{canvasCardContent}</div>
+              </div>
+              <div className="lab-floating-panel">
+                {conceptPanelMinimized ? (
+                  <button className="lab-panel-pill" onClick={() => setConceptPanelMinimized(false)}>
+                    <GraduationCap size={16} />
+                    <span className="bn">
+                      {onboardGate === "quiz" ? `${t("ধাপ", "Step")} ${toNum(conceptStep + 1)}/${toNum(4)}` : t("শুরু করার আগে", "Before we start")}
+                    </span>
+                    <ChevronUp size={15} />
+                  </button>
+                ) : (
+                  <div className="ro-card quiz-card concept-onboard-card" key={onboardGate + conceptStep}>
+                    <button className="lab-panel-minimize-btn" onClick={() => setConceptPanelMinimized(true)} aria-label={t("ছোট করো", "Minimize")}>
+                      <ChevronDown size={16} />
+                    </button>
+                    <button
+                      className="onboarding-skip-btn onboarding-skip-btn-panel"
+                      onClick={skipConceptOnboarding}
+                      aria-label={t("এড়িয়ে যাও", "Skip")}
+                      title={t("এড়িয়ে যাও", "Skip this walkthrough")}
+                    >
+                      <X size={16} />
+                    </button>
+                    {questionCardInner}
+                  </div>
+                )}
+              </div>
+            </>
+          );
+        }
+
+        // Desktop: canvas + the question card live together inside one
+        // contained, centered popup (with a dimmed backdrop) instead of
+        // the canvas going edge-to-edge and the question floating separately.
+        return (
+          <>
+            <div className="onboarding-modal-backdrop" />
+            <div className="onboarding-modal-shell">
+              {skipBtn}
+              {canvasCardContent}
+              <div className="ro-card quiz-card concept-onboard-card" key={onboardGate + conceptStep}>
+                {questionCardInner}
               </div>
             </div>
           </>
@@ -3310,7 +3445,7 @@ const styles = `
 @media (min-width: 900px) {
   .onboarding-modal-shell {
     flex-direction: row; align-items: stretch;
-    width: 92vw; max-width: 1280px; height: 90vh; max-height: 90vh; padding: 28px;
+    width: 96vw; max-width: 1600px; height: 95vh; max-height: 95vh; padding: 28px;
   }
   .onboarding-modal-shell > .ro-card.canvas-card { flex: 1 1 48%; min-width: 0; display: flex; flex-direction: column; }
   .onboarding-modal-shell > .ro-card.canvas-card .canvas-wrap { flex: 1; }
@@ -3318,6 +3453,32 @@ const styles = `
     flex: 1 1 52%; min-width: 0; align-self: stretch;
     display: flex; flex-direction: column; justify-content: center; overflow-y: auto;
   }
+}
+.onboarding-skip-btn {
+  position: absolute; top: 12px; right: 12px; z-index: 3; width: 30px; height: 30px;
+  border-radius: 50%; border: none; background: rgba(17,24,39,0.06); color: #6B7280;
+  display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 150ms;
+}
+.onboarding-skip-btn:hover { background: rgba(17,24,39,0.12); color: #374151; }
+.onboarding-skip-btn-panel { position: absolute; top: 10px; right: 44px; width: 28px; height: 28px; background: rgba(255,255,255,0.7); }
+.onboarding-skip-btn-panel:hover { background: #fff; }
+/* Yes/No gate + "show me all the shapes" gallery, shown before the actual
+   4-step walkthrough. */
+.gate-btn-row { display: flex; gap: 10px; margin-top: 4px; }
+.gate-btn-row .predict-start-btn { margin-top: 0; }
+.predict-start-btn.secondary { background: #fff; color: var(--c-primary); border: 2px solid var(--c-primary); }
+.predict-start-btn.secondary:hover:not(:disabled) { background: var(--c-nav-active-tint); }
+.shape-gallery { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 4px 0 6px; }
+.shape-gallery-item {
+  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px;
+  padding: 12px 8px; border: 1px solid var(--border); border-radius: 12px; background: var(--gray-50, #FAFAF9);
+}
+.shape-gallery-item .shape-icon { color: var(--gray-600); }
+.shape-gallery-name { font-size: 12px; font-weight: 800; color: var(--gray-800, #1F2937); }
+.shape-gallery-desc { font-size: 11px; line-height: 1.5; color: var(--gray-500); }
+@media (min-width: 900px) {
+  .shape-gallery-item { padding: 16px 10px; }
+  .shape-gallery-desc { font-size: 12px; }
 }
 .experiment-canvas { flex: 1; min-width: 0; }
 .canvas-card { padding: 8px; }
