@@ -527,7 +527,11 @@ export default function RayOptics({ hideNav = false, celebrateSignal, onConceptO
   // the real result explains itself, then chains into the real-world-use
   // and learning-outcome modals. Only after all 4 steps does the rest of
   // the page reveal.
-  const conceptKey = (m: Mode) => `ros_concept_onboarding_done_${m}_v1`;
+  // One global flag, not per-mode — whichever mode a student first lands on
+  // (via a direct link or the default) gets its own onboarding content, but
+  // completing it once is enough; switching tabs afterward should never
+  // trigger onboarding again for a different mode.
+  const conceptKey = () => `ros_concept_onboarding_done_v1`;
   const [showConceptOnboarding, setShowConceptOnboarding] = useState(false);
   const [conceptStep, setConceptStep] = useState(0); // 0 = identify, 1 = prediction MCQ, 2-3 = placement tasks
   const [conceptSelectedIdx, setConceptSelectedIdx] = useState<number | null>(null); // steps 0 & 1 only
@@ -539,7 +543,7 @@ export default function RayOptics({ hideNav = false, celebrateSignal, onConceptO
     if (conceptStartedRef.current.has(mode)) return;
     conceptStartedRef.current.add(mode);
     try {
-      if (localStorage.getItem(conceptKey(mode))) return;
+      if (localStorage.getItem(conceptKey())) return;
     } catch {}
     // Shuffle: one random prediction MCQ, and 2 of the 3 placement zones
     // in a random order — so it's not the exact same 4 steps every visit.
@@ -588,7 +592,7 @@ export default function RayOptics({ hideNav = false, celebrateSignal, onConceptO
   };
   const nextConceptStep = () => {
     if (conceptStep >= 3) {
-      try { localStorage.setItem(conceptKey(mode), "1"); } catch {}
+      try { localStorage.setItem(conceptKey(), "1"); } catch {}
       setShowConceptOnboarding(false);
       return;
     }
