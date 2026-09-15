@@ -3299,6 +3299,16 @@ const styles = `
 }
 @media (min-width: 600px) { .onboarding-modal-shell { padding: 20px; } }
 .onboarding-modal-shell .canvas-card { margin-bottom: 0; }
+/* Wide screens: lay the canvas and question side-by-side instead of the
+   same narrow stacked column used on mobile, so the popup actually makes
+   use of the extra desktop space. */
+@media (min-width: 900px) {
+  .onboarding-modal-shell {
+    flex-direction: row; align-items: flex-start; max-width: 900px; padding: 24px;
+  }
+  .onboarding-modal-shell > .ro-card.canvas-card { flex: 1 1 46%; min-width: 0; }
+  .onboarding-modal-shell > .concept-onboard-card { flex: 1 1 54%; min-width: 0; align-self: stretch; }
+}
 .experiment-canvas { flex: 1; min-width: 0; }
 .canvas-card { padding: 8px; }
 .tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
