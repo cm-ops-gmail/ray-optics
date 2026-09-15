@@ -1225,7 +1225,7 @@ export default function RayOptics({ hideNav = false, celebrateSignal, onConceptO
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  }, [showConceptOnboarding]);
 
   // Resize use case canvas
   useEffect(() => {
@@ -1652,8 +1652,8 @@ export default function RayOptics({ hideNav = false, celebrateSignal, onConceptO
       </div>
       )}
 
-      <div className={"experiment-row" + (showConceptOnboarding ? " onboarding-fullscreen" : "")}>
-        <div className="experiment-canvas">
+      {(() => {
+        const canvasCardContent = (
           <div className="ro-card canvas-card">
             <div className="canvas-wrap" ref={containerRef}>
               <canvas
@@ -1712,8 +1712,167 @@ export default function RayOptics({ hideNav = false, celebrateSignal, onConceptO
             </div>
             )}
           </div>
-        </div>
-      </div>
+        );
+        if (!showConceptOnboarding) {
+          return (
+            <div className="experiment-row">
+              <div className="experiment-canvas">{canvasCardContent}</div>
+            </div>
+          );
+        }
+        // Onboarding: canvas + the question card live together inside one
+        // contained, centered popup (with a dimmed backdrop) instead of
+        // the canvas going edge-to-edge and the question floating separately.
+        return (
+          <>
+            <div className="onboarding-modal-backdrop" />
+            <div className="onboarding-modal-shell">
+              {canvasCardContent}
+              <div className="ro-card quiz-card concept-onboard-card" key={conceptStep}>
+                <div className="quiz-header">
+                  <span className="quiz-icon"><GraduationCap size={22} /></span>
+                  <span className="quiz-round bn">{t("ধাপ", "Step")} {toNum(conceptStep + 1)}/{toNum(4)}</span>
+                </div>
+
+                {conceptStep === 0 && (
+                  <>
+                    <div className="quiz-question bn">{t(IDENTIFY_QUESTION.bn, IDENTIFY_QUESTION.en)}</div>
+                    <div className="quiz-options">
+                      {IDENTIFY_OPTIONS.map((opt, i) => (
+                        <button
+                          key={i}
+                          className={
+                            "quiz-option bn" +
+                            (!conceptChecked && conceptSelectedIdx === i ? " sel" : "") +
+                            (conceptChecked && conceptSelectedIdx === i ? (i === conceptIdentifyCorrectIdx ? " correct" : " wrong") : "") +
+                            (conceptChecked && i === conceptIdentifyCorrectIdx ? " correct" : "")
+                          }
+                          disabled={conceptChecked}
+                          onClick={() => setConceptSelectedIdx(i)}
+                        >
+                          <span className="opt-letter">{String.fromCharCode(65 + i)}</span>
+                          {t(opt.bn, opt.en)}
+                        </button>
+                      ))}
+                    </div>
+                    {conceptChecked && (
+                      <>
+                        <div className={"quiz-feedback bn " + (conceptSelectedIdx === conceptIdentifyCorrectIdx ? "correct" : "wrong")}>
+                          {conceptSelectedIdx === conceptIdentifyCorrectIdx ? t("সঠিক!", "Correct!") : t("ভুল উত্তর", "Wrong answer")}
+                        </div>
+                        <div className="explain-card-v2 concept-explain">
+                          {conceptSelectedIdx !== null && conceptSelectedIdx !== conceptIdentifyCorrectIdx && (
+                            <div className="identify-compare">
+                              <div className="identify-compare-item wrong">
+                                <ShapeIcon shape={MODES[conceptSelectedIdx].id} />
+                                <span className="identify-compare-label bn">{t("তুমি বলেছো", "You said")}</span>
+                                <span className="identify-compare-name bn">{t(IDENTIFY_OPTIONS[conceptSelectedIdx].bn, IDENTIFY_OPTIONS[conceptSelectedIdx].en)}</span>
+                              </div>
+                              <ChevronRight className="identify-compare-arrow" size={18} />
+                              <div className="identify-compare-item correct">
+                                <ShapeIcon shape={mode} />
+                                <span className="identify-compare-label bn">{t("আসলে এটা", "It's actually")}</span>
+                                <span className="identify-compare-name bn">{t(IDENTIFY_OPTIONS[conceptIdentifyCorrectIdx].bn, IDENTIFY_OPTIONS[conceptIdentifyCorrectIdx].en)}</span>
+                              </div>
+                            </div>
+                          )}
+                          <p className="explain-body bn">{t(IDENTIFY_EXPLAIN[mode].bn, IDENTIFY_EXPLAIN[mode].en)}</p>
+                        </div>
+                      </>
+                    )}
+                    {!conceptChecked && (
+                      <button className="predict-start-btn" disabled={conceptSelectedIdx === null} onClick={checkIdentifyAnswer}>
+                        {t("চেক করো", "Check")}
+                      </button>
+                    )}
+                  </>
+                )}
+
+                {conceptStep === 1 && conceptMcq && (
+                  <>
+                    <div className="quiz-question bn">{t(conceptMcq.question.bn, conceptMcq.question.en)}</div>
+                    <div className="quiz-options">
+                      {conceptMcq.options.map((opt, i) => (
+                        <button
+                          key={i}
+                          className={
+                            "quiz-option bn" +
+                            (!conceptChecked && conceptSelectedIdx === i ? " sel" : "") +
+                            (conceptChecked && conceptSelectedIdx === i ? (i === conceptMcq.correctIdx ? " correct" : " wrong") : "") +
+                            (conceptChecked && i === conceptMcq.correctIdx ? " correct" : "")
+                          }
+                          disabled={conceptChecked}
+                          onClick={() => setConceptSelectedIdx(i)}
+                        >
+                          <span className="opt-letter">{String.fromCharCode(65 + i)}</span>
+                          {t(opt.bn, opt.en)}
+                        </button>
+                      ))}
+                    </div>
+                    {conceptChecked && (
+                      <>
+                        <div className={"quiz-feedback bn " + (conceptSelectedIdx === conceptMcq.correctIdx ? "correct" : "wrong")}>
+                          {conceptSelectedIdx === conceptMcq.correctIdx ? t("সঠিক!", "Correct!") : t("ভুল উত্তর", "Wrong answer")}
+                        </div>
+                        <div className="explain-card-v2 concept-explain">
+                          <div className="explain-header">
+                            <div className="explain-icon-pulse"><Sparkles size={18} /></div>
+                            <div className="explain-title bn">{t("সিমুলেশনে দেখো — আসলে কী হচ্ছে:", "Watch the simulation — here's what's really happening:")}</div>
+                          </div>
+                          <p className="explain-body bn">{explanation}</p>
+                        </div>
+                      </>
+                    )}
+                    {!conceptChecked && (
+                      <button className="predict-start-btn" disabled={conceptSelectedIdx === null} onClick={checkPhysicsMcqAnswer}>
+                        {t("চেক করো", "Check")}
+                      </button>
+                    )}
+                  </>
+                )}
+
+                {conceptStep >= 2 && conceptTask && (
+                  <>
+                    <div className="quiz-question bn">
+                      {t("মোমবাতিটি ধরে ", "Grab the candle and drag it — ")}
+                      <strong>{t(conceptTask.label.bn, conceptTask.label.en)}</strong>
+                      {t("।", ".")}
+                    </div>
+                    {!conceptChecked && (
+                      <div className="quest-mode-hint bn">
+                        {t("তুমি এখন আছো:", "You're currently at:")} <strong>{conceptCurrentZoneLabel}</strong>
+                      </div>
+                    )}
+                    {conceptChecked && (
+                      <>
+                        <div className="quiz-feedback bn correct">{t("চমৎকার! ঠিক জায়গায় নিয়ে গেছো।", "Nicely done! You got it there.")}</div>
+                        <div className="explain-card-v2 concept-explain">
+                          <div className="explain-header">
+                            <div className="explain-icon-pulse"><Sparkles size={18} /></div>
+                            <div className="explain-title bn">{t("দেখো — আসলে কী হচ্ছে:", "Here's what's really happening:")}</div>
+                          </div>
+                          <p className="explain-body bn">{explanation}</p>
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+
+                {conceptChecked && conceptStep < 2 && (
+                  <button className="predict-start-btn" onClick={nextConceptStep}>
+                    {t("পরবর্তী ধাপ →", "Next step →")}
+                  </button>
+                )}
+                {conceptChecked && conceptStep >= 2 && (
+                  <button className="predict-start-btn" onClick={startPostDragSequence}>
+                    {t("বাস্তব উদাহরণ দেখো →", "See a real-world example →")}
+                  </button>
+                )}
+              </div>
+            </div>
+          </>
+        );
+      })()}
 
       {/* Controls toolkit — floating, opened on demand via the sliders icon
           in the action-row, instead of a permanent side panel. */}
@@ -1842,150 +2001,6 @@ export default function RayOptics({ hideNav = false, celebrateSignal, onConceptO
             <p className="learning-message bn">
               {t(F_SIGN_EXPLAIN[mode].bodyBn, F_SIGN_EXPLAIN[mode].bodyEn)}
             </p>
-          </div>
-        </div>
-      )}
-
-      {showConceptOnboarding && (
-        <div className="concept-onboard-panel">
-          <div className="ro-card quiz-card concept-onboard-card" key={conceptStep}>
-            <div className="quiz-header">
-              <span className="quiz-icon"><GraduationCap size={22} /></span>
-              <span className="quiz-round bn">{t("ধাপ", "Step")} {toNum(conceptStep + 1)}/{toNum(4)}</span>
-            </div>
-
-            {conceptStep === 0 && (
-              <>
-                <div className="quiz-question bn">{t(IDENTIFY_QUESTION.bn, IDENTIFY_QUESTION.en)}</div>
-                <div className="quiz-options">
-                  {IDENTIFY_OPTIONS.map((opt, i) => (
-                    <button
-                      key={i}
-                      className={
-                        "quiz-option bn" +
-                        (conceptChecked && conceptSelectedIdx === i ? (i === conceptIdentifyCorrectIdx ? " correct" : " wrong") : "") +
-                        (conceptChecked && i === conceptIdentifyCorrectIdx ? " correct" : "")
-                      }
-                      disabled={conceptChecked}
-                      onClick={() => setConceptSelectedIdx(i)}
-                    >
-                      <span className="opt-letter">{String.fromCharCode(65 + i)}</span>
-                      {t(opt.bn, opt.en)}
-                    </button>
-                  ))}
-                </div>
-                {conceptChecked && (
-                  <>
-                    <div className={"quiz-feedback bn " + (conceptSelectedIdx === conceptIdentifyCorrectIdx ? "correct" : "wrong")}>
-                      {conceptSelectedIdx === conceptIdentifyCorrectIdx ? t("সঠিক!", "Correct!") : t("ভুল উত্তর", "Wrong answer")}
-                    </div>
-                    <div className="explain-card-v2 concept-explain">
-                      {conceptSelectedIdx !== null && conceptSelectedIdx !== conceptIdentifyCorrectIdx && (
-                        <div className="identify-compare">
-                          <div className="identify-compare-item wrong">
-                            <ShapeIcon shape={MODES[conceptSelectedIdx].id} />
-                            <span className="identify-compare-label bn">{t("তুমি বলেছো", "You said")}</span>
-                            <span className="identify-compare-name bn">{t(IDENTIFY_OPTIONS[conceptSelectedIdx].bn, IDENTIFY_OPTIONS[conceptSelectedIdx].en)}</span>
-                          </div>
-                          <ChevronRight className="identify-compare-arrow" size={18} />
-                          <div className="identify-compare-item correct">
-                            <ShapeIcon shape={mode} />
-                            <span className="identify-compare-label bn">{t("আসলে এটা", "It's actually")}</span>
-                            <span className="identify-compare-name bn">{t(IDENTIFY_OPTIONS[conceptIdentifyCorrectIdx].bn, IDENTIFY_OPTIONS[conceptIdentifyCorrectIdx].en)}</span>
-                          </div>
-                        </div>
-                      )}
-                      <p className="explain-body bn">{t(IDENTIFY_EXPLAIN[mode].bn, IDENTIFY_EXPLAIN[mode].en)}</p>
-                    </div>
-                  </>
-                )}
-                {!conceptChecked && (
-                  <button className="predict-start-btn" disabled={conceptSelectedIdx === null} onClick={checkIdentifyAnswer}>
-                    {t("চেক করো", "Check")}
-                  </button>
-                )}
-              </>
-            )}
-
-            {conceptStep === 1 && conceptMcq && (
-              <>
-                <div className="quiz-question bn">{t(conceptMcq.question.bn, conceptMcq.question.en)}</div>
-                <div className="quiz-options">
-                  {conceptMcq.options.map((opt, i) => (
-                    <button
-                      key={i}
-                      className={
-                        "quiz-option bn" +
-                        (conceptChecked && conceptSelectedIdx === i ? (i === conceptMcq.correctIdx ? " correct" : " wrong") : "") +
-                        (conceptChecked && i === conceptMcq.correctIdx ? " correct" : "")
-                      }
-                      disabled={conceptChecked}
-                      onClick={() => setConceptSelectedIdx(i)}
-                    >
-                      <span className="opt-letter">{String.fromCharCode(65 + i)}</span>
-                      {t(opt.bn, opt.en)}
-                    </button>
-                  ))}
-                </div>
-                {conceptChecked && (
-                  <>
-                    <div className={"quiz-feedback bn " + (conceptSelectedIdx === conceptMcq.correctIdx ? "correct" : "wrong")}>
-                      {conceptSelectedIdx === conceptMcq.correctIdx ? t("সঠিক!", "Correct!") : t("ভুল উত্তর", "Wrong answer")}
-                    </div>
-                    <div className="explain-card-v2 concept-explain">
-                      <div className="explain-header">
-                        <div className="explain-icon-pulse"><Sparkles size={18} /></div>
-                        <div className="explain-title bn">{t("সিমুলেশনে দেখো — আসলে কী হচ্ছে:", "Watch the simulation — here's what's really happening:")}</div>
-                      </div>
-                      <p className="explain-body bn">{explanation}</p>
-                    </div>
-                  </>
-                )}
-                {!conceptChecked && (
-                  <button className="predict-start-btn" disabled={conceptSelectedIdx === null} onClick={checkPhysicsMcqAnswer}>
-                    {t("চেক করো", "Check")}
-                  </button>
-                )}
-              </>
-            )}
-
-            {conceptStep >= 2 && conceptTask && (
-              <>
-                <div className="quiz-question bn">
-                  {t("মোমবাতিটি ধরে ", "Grab the candle and drag it — ")}
-                  <strong>{t(conceptTask.label.bn, conceptTask.label.en)}</strong>
-                  {t("।", ".")}
-                </div>
-                {!conceptChecked && (
-                  <div className="quest-mode-hint bn">
-                    {t("তুমি এখন আছো:", "You're currently at:")} <strong>{conceptCurrentZoneLabel}</strong>
-                  </div>
-                )}
-                {conceptChecked && (
-                  <>
-                    <div className="quiz-feedback bn correct">{t("চমৎকার! ঠিক জায়গায় নিয়ে গেছো।", "Nicely done! You got it there.")}</div>
-                    <div className="explain-card-v2 concept-explain">
-                      <div className="explain-header">
-                        <div className="explain-icon-pulse"><Sparkles size={18} /></div>
-                        <div className="explain-title bn">{t("দেখো — আসলে কী হচ্ছে:", "Here's what's really happening:")}</div>
-                      </div>
-                      <p className="explain-body bn">{explanation}</p>
-                    </div>
-                  </>
-                )}
-              </>
-            )}
-
-            {conceptChecked && conceptStep < 2 && (
-              <button className="predict-start-btn" onClick={nextConceptStep}>
-                {t("পরবর্তী ধাপ →", "Next step →")}
-              </button>
-            )}
-            {conceptChecked && conceptStep >= 2 && (
-              <button className="predict-start-btn" onClick={startPostDragSequence}>
-                {t("বাস্তব উদাহরণ দেখো →", "See a real-world example →")}
-              </button>
-            )}
           </div>
         </div>
       )}
@@ -3261,22 +3276,29 @@ const styles = `
 .ro-card { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 10px; }
 .experiment-row { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
 @media (min-width: 768px) { .experiment-row { flex-direction: row; } }
-/* Concept onboarding takes over as its own full-screen "page" — a popup
-   with a proper entrance animation — rather than sitting inline in the
-   normal layout. Same simulation screen inside it, just presented as a
-   distinct animated overlay until the student finishes all 4 steps. */
+/* Concept onboarding is presented as a proper contained popup — a dimmed
+   backdrop behind a centered, bounded card (same shape as the existing
+   congrats-modal pattern) holding the same simulation canvas + question,
+   rather than taking over the whole viewport edge-to-edge. */
 @keyframes onboardingPageIn {
-  from { opacity: 0; transform: scale(0.96); }
-  to { opacity: 1; transform: scale(1); }
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.96); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
-.experiment-row.onboarding-fullscreen {
-  position: fixed; inset: 0; z-index: 500; background: var(--bg);
-  overflow-y: auto; margin: 0; padding: 16px;
-  display: flex; flex-direction: column; justify-content: center;
-  animation: onboardingPageIn 0.4s cubic-bezier(0.16,1,0.3,1);
+.onboarding-modal-backdrop {
+  position: fixed; inset: 0; z-index: 9390; background: rgba(17,24,39,0.6);
+  backdrop-filter: blur(4px); animation: congratsBdIn 0.2s ease-out;
 }
-@media (min-width: 768px) { .experiment-row.onboarding-fullscreen { flex-direction: column; padding: 32px; } }
-.experiment-row.onboarding-fullscreen .experiment-canvas { flex: 0 1 auto; width: 100%; max-width: 520px; margin: 0 auto; }
+.onboarding-modal-shell {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  z-index: 9395; background: #fff;
+  width: calc(100vw - 32px); max-width: 480px; max-height: 92vh;
+  overflow-y: auto; border-radius: 20px; padding: 16px;
+  box-shadow: 0 25px 60px rgba(0,0,0,0.35);
+  display: flex; flex-direction: column; gap: 12px;
+  animation: onboardingPageIn 0.3s cubic-bezier(0.16,1,0.3,1);
+}
+@media (min-width: 600px) { .onboarding-modal-shell { padding: 20px; } }
+.onboarding-modal-shell .canvas-card { margin-bottom: 0; }
 .experiment-canvas { flex: 1; min-width: 0; }
 .canvas-card { padding: 8px; }
 .tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
@@ -3398,31 +3420,13 @@ input[type="range"]:focus { outline: none; }
 }
 .predict-start-btn:hover:not(:disabled) { background: var(--c-primary-deep); transform: translateY(-1px); }
 .predict-start-btn:disabled { background: var(--gray-300, #D9D6D2); color: var(--gray-500); cursor: not-allowed; }
-/* Right-anchored floating card, like the Assessment quiz panel — stays out
-   of the way of the canvas so the simulation is always visible while
-   reading it, but still gets a pop-in animation and a glow ring so a new
-   step is never missed (the card remounts via a per-step React key). */
-.concept-onboard-panel {
-  position: fixed; right: 16px; bottom: 16px; z-index: 860;
-  max-width: 340px; width: calc(100vw - 32px);
-}
-@media (min-width: 768px) { .concept-onboard-panel { max-width: 400px; } }
-@keyframes conceptPanelIn {
-  from { opacity: 0; transform: translateY(24px) scale(0.96); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-@keyframes conceptRingPulse {
-  0%, 100% { box-shadow: 0 6px 24px rgba(0,0,0,0.2), 0 0 0 2px var(--c-primary), 0 0 0 6px rgba(28,171,85,0.18); }
-  50% { box-shadow: 0 6px 24px rgba(0,0,0,0.2), 0 0 0 2px var(--c-primary), 0 0 0 10px rgba(28,171,85,0.3); }
-}
-.concept-onboard-card {
-  position: relative; max-height: 70vh; overflow-y: auto; margin-bottom: 0; padding: 16px;
-  animation: conceptPanelIn 0.35s cubic-bezier(0.16,1,0.3,1), conceptRingPulse 2.2s ease-in-out 0.35s infinite;
-}
+/* Question card inside the onboarding popup shell — a plain flex child,
+   step transitions handled by the per-step React key remount. */
+.concept-onboard-card { position: relative; margin-bottom: 0; padding: 16px; }
 @media (min-width: 768px) { .concept-onboard-card { padding: 22px; } }
-.concept-onboard-panel .concept-explain { margin: 4px 0 10px; padding: 12px; animation: fadeSlideIn 0.35s ease-out; }
-.concept-onboard-panel .concept-explain .explain-body { font-size: 13px; line-height: 1.6; }
-.concept-onboard-panel .quiz-feedback { animation: fadeSlideIn 0.3s ease-out; }
+.concept-onboard-card .concept-explain { margin: 4px 0 10px; padding: 12px; animation: fadeSlideIn 0.35s ease-out; }
+.concept-onboard-card .concept-explain .explain-body { font-size: 13px; line-height: 1.6; }
+.concept-onboard-card .quiz-feedback { animation: fadeSlideIn 0.3s ease-out; }
 .identify-compare { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px; }
 .identify-compare-item { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 1; padding: 8px 4px; border-radius: 10px; }
 .identify-compare-item .shape-icon { color: var(--gray-600); }
@@ -3598,9 +3602,11 @@ input[type="range"]:focus { outline: none; }
 .quiz-options { display: flex; flex-direction: column; gap: 8px; }
 .quiz-option { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: #fff; border: 2px solid var(--border); border-radius: 12px; font-size: 14px; font-family: inherit; cursor: pointer; transition: all 200ms; text-align: left; min-height: 48px; }
 .quiz-option:hover:not(:disabled) { border-color: var(--c-primary); background: var(--c-nav-active-tint); }
+.quiz-option.sel { border-color: var(--c-primary); background: var(--c-nav-active-tint); box-shadow: 0 0 0 1px var(--c-primary); }
 .quiz-option.correct { border-color: var(--c-primary); background: var(--c-primary-container); }
 .quiz-option.wrong { border-color: var(--c-error); background: var(--c-alert-surface); }
 .opt-letter { width: 26px; height: 26px; border-radius: 50%; background: var(--gray-100); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; color: var(--gray-600); flex-shrink: 0; font-family: 'Inter',sans-serif; }
+.quiz-option.sel .opt-letter { background: var(--c-primary); color: #fff; }
 .quiz-option.correct .opt-letter { background: var(--c-primary); color: #fff; }
 .quiz-option.wrong .opt-letter { background: var(--c-error); color: #fff; }
 .quiz-feedback { text-align: center; padding: 10px; margin-top: 10px; border-radius: 10px; font-weight: 700; font-size: 14px; animation: fadeSlideIn 0.3s ease-out; }
