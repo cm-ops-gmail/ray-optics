@@ -34,6 +34,18 @@ export function GuidedTour({ steps, started, onEnd, lang = "bn", strict = false,
   const [interactionDone, setInteractionDone] = useState(false);
   const [targetMissing, setTargetMissing] = useState(false);
   const prevElRef = useRef<HTMLElement | null>(null);
+  const prevAncestorsRef = useRef<HTMLElement[]>([]);
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  // A guessed height used to decide where the card fits before it's even
+  // rendered; corrected to the real measured height right after, since
+  // description length varies a lot step to step and an under-estimate
+  // can leave the card touching (or slightly inside) whatever it's meant
+  // to avoid overlapping.
+  const [cardH, setCardH] = useState(200);
+  useEffect(() => {
+    const h = cardRef.current?.offsetHeight;
+    if (h && Math.abs(h - cardH) > 2) setCardH(h);
+  });
 
   // Keep a persistent element (e.g. the canvas) elevated above the dimmed
   // backdrop for the whole tour, independent of which step is highlighted.
@@ -81,12 +93,35 @@ export function GuidedTour({ steps, started, onEnd, lang = "bn", strict = false,
       prevElRef.current.style.removeProperty("pointer-events");
       prevElRef.current = null;
     }
+    prevAncestorsRef.current.forEach((a) => a.style.removeProperty("z-index"));
+    prevAncestorsRef.current = [];
+
     if (el) {
       const pos = getComputedStyle(el).position;
       if (pos === "static") el.style.position = "relative";
       el.style.zIndex = "9005";
       el.style.pointerEvents = "auto";
       prevElRef.current = el;
+
+      // A target nested inside its own lower-z-index stacking context (e.g.
+      // a fixed floating panel like the controls toolkit, z-index 850)
+      // stays visually and interactively trapped under the tour's dimmed
+      // backdrop (z-index 9000) even once elevated itself — a descendant's
+      // z-index only competes within the nearest ancestor stacking context,
+      // not globally, so the whole subtree still paints (and hit-tests)
+      // behind the backdrop. Walk up and lift any such ancestor above the
+      // backdrop too, so real clicks (not just the spotlight ring) land
+      // where they're supposed to.
+      let node = el.parentElement;
+      while (node && node !== document.body) {
+        const cs = getComputedStyle(node);
+        const z = parseInt(cs.zIndex, 10);
+        if (cs.position !== "static" && !Number.isNaN(z) && z < 9000) {
+          node.style.setProperty("z-index", "9002");
+          prevAncestorsRef.current.push(node);
+        }
+        node = node.parentElement;
+      }
     }
   }, []);
 
@@ -173,15 +208,52 @@ export function GuidedTour({ steps, started, onEnd, lang = "bn", strict = false,
 
   const getCardPos = (): React.CSSProperties => {
     const cw = Math.min(280, window.innerWidth - 24);
-    const CH = 200;
+    const CH = cardH;
     const vh = window.innerHeight;
     const vw = window.innerWidth;
+    const MARGIN = 12;
     if (!rect) return { position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: `${cw}px` };
-    let top = rect.bottom + PAD + 10;
+
+    // A target nested inside a fixed-position panel (e.g. the controls
+    // toolkit) is often much smaller than the panel itself — placing the
+    // card based only on the narrow target rect can still land it on top
+    // of the rest of that panel. Avoid the whole panel's footprint instead
+    // of just the target's, when one exists.
+    let avoid: DOMRect = rect;
+    let node: HTMLElement | null = prevElRef.current;
+    while (node && node !== document.body) {
+      if (getComputedStyle(node).position === "fixed") { avoid = node.getBoundingClientRect(); break; }
+      node = node.parentElement;
+    }
+
+    // Prefer whichever of below/above the avoid-zone has more room, then
+    // clamp fully inside the viewport.
+    const spaceBelow = vh - avoid.bottom - PAD - 10 - MARGIN;
+    const spaceAbove = avoid.top - PAD - 10 - MARGIN;
+    let top = spaceBelow >= CH || spaceBelow >= spaceAbove
+      ? avoid.bottom + PAD + 10
+      : avoid.top - CH - PAD - 10;
+    top = Math.max(MARGIN, Math.min(top, vh - CH - MARGIN));
+
     let left = rect.left + rect.width / 2 - cw / 2;
-    if (top + CH > vh - 12) top = rect.top - CH - PAD - 10;
-    if (top < 12) top = 12;
-    left = Math.max(12, Math.min(left, vw - cw - 12));
+    left = Math.max(MARGIN, Math.min(left, vw - cw - MARGIN));
+
+    // A tall avoid-zone relative to the viewport (e.g. a floating panel
+    // anchored to a screen edge) can leave no room above OR below without
+    // still overlapping it — clamping alone then lands the card right on
+    // top of the very thing it's pointing at, hiding it and swallowing
+    // clicks meant for it. When that happens, place the card beside it
+    // instead, on whichever side has more room.
+    const overlaps = top < avoid.bottom && top + CH > avoid.top && left < avoid.right && left + cw > avoid.left;
+    if (overlaps) {
+      const spaceLeft = avoid.left - PAD - 10 - MARGIN;
+      const spaceRight = vw - avoid.right - PAD - 10 - MARGIN;
+      left = spaceRight >= cw || spaceRight >= spaceLeft
+        ? Math.min(avoid.right + PAD + 10, vw - cw - MARGIN)
+        : Math.max(avoid.left - PAD - 10 - cw, MARGIN);
+      top = Math.max(MARGIN, Math.min(avoid.top, vh - CH - MARGIN));
+    }
+
     return { position: "fixed", top: `${top}px`, left: `${left}px`, width: `${cw}px` };
   };
 
@@ -208,6 +280,7 @@ export function GuidedTour({ steps, started, onEnd, lang = "bn", strict = false,
 
       {/* Card */}
       <div
+        ref={cardRef}
         onClick={e => e.stopPropagation()}
         style={{
           ...getCardPos(), zIndex:9006,
