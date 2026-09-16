@@ -1709,32 +1709,40 @@ export default function RayOptics({ hideNav = false, celebrateSignal, onConceptO
               >
                 {lightOn ? t("আলো নিভাও", "Turn Off Light") : t("আলো জ্বালাও", "Turn On Light")}
               </button>
-              <button
-                className={"outcome-action-btn learning-action-btn" + (highlightActionButtons ? " pulse-highlight" : "")}
-                onClick={() => setShowLearningModal(true)}
-                aria-label={t("লার্নিং আউটকাম", "Learning Outcome")}
-                title={t("লার্নিং আউটকাম", "Learning Outcome")}
-              >
-                <Lightbulb size={16} />
-              </button>
-              {currentUseCases.length > 0 && (
-                <button
-                  className={"outcome-action-btn goto-usecase-btn" + (highlightActionButtons ? " pulse-highlight" : "")}
-                  onClick={() => setShowUseCaseModal(true)}
-                  aria-label={t("বাস্তব ব্যবহার", "Real-world Use")}
-                  title={t("বাস্তব ব্যবহার", "Real-world Use")}
-                >
-                  <Info size={16} />
-                </button>
+              {/* Hidden during onboarding — it drives the light, use-case
+                  and learning modals itself; showing these here too would
+                  let a student jump ahead of (or duplicate) the guided
+                  sequence. */}
+              {!showConceptOnboarding && (
+                <>
+                  <button
+                    className={"outcome-action-btn learning-action-btn" + (highlightActionButtons ? " pulse-highlight" : "")}
+                    onClick={() => setShowLearningModal(true)}
+                    aria-label={t("লার্নিং আউটকাম", "Learning Outcome")}
+                    title={t("লার্নিং আউটকাম", "Learning Outcome")}
+                  >
+                    <Lightbulb size={16} />
+                  </button>
+                  {currentUseCases.length > 0 && (
+                    <button
+                      className={"outcome-action-btn goto-usecase-btn" + (highlightActionButtons ? " pulse-highlight" : "")}
+                      onClick={() => setShowUseCaseModal(true)}
+                      aria-label={t("বাস্তব ব্যবহার", "Real-world Use")}
+                      title={t("বাস্তব ব্যবহার", "Real-world Use")}
+                    >
+                      <Info size={16} />
+                    </button>
+                  )}
+                  <button
+                    className={"outcome-action-btn controls-toggle-btn" + (showControlsPanel ? " active" : "")}
+                    onClick={() => setShowControlsPanel((v) => !v)}
+                    aria-label={t("নিয়ন্ত্রণ (দূরত্ব, প্রিসেট, রশ্মি)", "Controls (distance, presets, rays)")}
+                    title={t("নিয়ন্ত্রণ", "Controls")}
+                  >
+                    <SlidersHorizontal size={16} />
+                  </button>
+                </>
               )}
-              <button
-                className={"outcome-action-btn controls-toggle-btn" + (showControlsPanel ? " active" : "")}
-                onClick={() => setShowControlsPanel((v) => !v)}
-                aria-label={t("নিয়ন্ত্রণ (দূরত্ব, প্রিসেট, রশ্মি)", "Controls (distance, presets, rays)")}
-                title={t("নিয়ন্ত্রণ", "Controls")}
-              >
-                <SlidersHorizontal size={16} />
-              </button>
             </div>
             {!showConceptOnboarding && (
             <div className="legend">
@@ -2146,11 +2154,13 @@ export default function RayOptics({ hideNav = false, celebrateSignal, onConceptO
       )}
 
       {showLearningModal && (
-        <div className="congrats-modal-bd" onClick={closeConceptLearningModal}>
+        <div className="congrats-modal-bd" onClick={showConceptOnboarding ? undefined : closeConceptLearningModal}>
           <div className="congrats-modal-card" onClick={(e) => e.stopPropagation()}>
-            <button className="congrats-close" onClick={closeConceptLearningModal} aria-label={t("বন্ধ করো", "Close")}>
-              <X size={16} />
-            </button>
+            {!showConceptOnboarding && (
+              <button className="congrats-close" onClick={closeConceptLearningModal} aria-label={t("বন্ধ করো", "Close")}>
+                <X size={16} />
+              </button>
+            )}
             <div className="explain-header">
               <div className="learning-icon"><Lightbulb size={18} /></div>
               <div className="learning-title bn">{t("এই উপকরণ সম্পর্কে শিখুন:", `About ${outcomeTitle}:`)}</div>
@@ -2164,6 +2174,13 @@ export default function RayOptics({ hideNav = false, celebrateSignal, onConceptO
                 </div>
               ))}
             </div>
+            {/* During onboarding this modal is one step in a forced
+                sequence — only forward, no dismiss via X or backdrop. */}
+            {showConceptOnboarding && (
+              <button className="predict-start-btn" onClick={closeConceptLearningModal}>
+                {t("পরবর্তী →", "Next →")}
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -2206,6 +2223,7 @@ export default function RayOptics({ hideNav = false, celebrateSignal, onConceptO
           explanation={explanation}
           t={t}
           onClose={closeConceptUseCaseModal}
+          forceForward={showConceptOnboarding}
         />
       )}
     </div>
@@ -2264,12 +2282,15 @@ function ShapeIcon({ shape, size = 34 }: { shape: Mode; size?: number }) {
 }
 
 function UseCaseAnimationModal({
-  useCases, explanation, t, onClose,
+  useCases, explanation, t, onClose, forceForward,
 }: {
   useCases: { icon: string; title: string; desc: string; animation: string }[];
   explanation?: string;
   t: (bn: string, en: string) => string;
   onClose: () => void;
+  /** During onboarding this modal is one step in a forced sequence — only
+   * forward (via a Next button), no dismiss via X or the backdrop. */
+  forceForward?: boolean;
 }) {
   const [active, setActive] = useState(useCases[0]?.animation ?? "");
   const [animT, setAnimT] = useState(0);
@@ -2316,11 +2337,13 @@ function UseCaseAnimationModal({
   const activeMeta = useCases.find((u) => u.animation === active);
 
   return (
-    <div className="usecase-modal-bd" onClick={onClose}>
+    <div className="usecase-modal-bd" onClick={forceForward ? undefined : onClose}>
       <div className="usecase-modal-card" onClick={(e) => e.stopPropagation()}>
-        <button className="congrats-close" onClick={onClose} aria-label={t("বন্ধ করো", "Close")}>
-          <X size={16} />
-        </button>
+        {!forceForward && (
+          <button className="congrats-close" onClick={onClose} aria-label={t("বন্ধ করো", "Close")}>
+            <X size={16} />
+          </button>
+        )}
         <div className="explain-header">
           <div className="explain-icon-pulse"><Info size={20} /></div>
           <div className="explain-title bn">{t("এই অবস্থায় কী হচ্ছে:", "What's happening at this position:")}</div>
@@ -2353,6 +2376,11 @@ function UseCaseAnimationModal({
               {activeMeta ? `${getUseCaseMeta(activeMeta, t).title} — ${t("অ্যানিমেশন", "Animation")}` : ""}
             </div>
           </div>
+        )}
+        {forceForward && (
+          <button className="predict-start-btn" onClick={onClose}>
+            {t("পরবর্তী →", "Next →")}
+          </button>
         )}
       </div>
     </div>
