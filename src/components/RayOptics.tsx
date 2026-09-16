@@ -628,25 +628,35 @@ export default function RayOptics({ hideNav = false, celebrateSignal, onConceptO
     try { localStorage.setItem(conceptKey(), "1"); } catch {}
     setShowConceptOnboarding(false);
   };
-  // After the two hands-on placement tasks (steps 2 & 3) — once the student
-  // has dragged the candle in and seen the live explanation — chain into
-  // the existing "real-world use" and "learning outcome" modals before
-  // moving on, instead of jumping straight to the next step.
+  // After each hands-on placement task (steps 2 & 3) — once the student has
+  // dragged the candle in and seen the live explanation — chain into the
+  // "real-world use" modal, which is genuinely different each time (it's
+  // keyed by the candle's zone, e.g. camera vs. magnifying glass). The
+  // "learning outcome" modal, by contrast, is keyed only by lens/mirror
+  // type — identical either time — so it's shown just once, as a final
+  // summary after the last placement task.
   const [conceptModalChain, setConceptModalChain] = useState<"none" | "usecase" | "learning">("none");
   const startPostDragSequence = () => {
+    const isLastStep = conceptStep >= 3;
     if (currentUseCases.length > 0) {
       setConceptModalChain("usecase");
       setShowUseCaseModal(true);
-    } else {
+    } else if (isLastStep) {
       setConceptModalChain("learning");
       setShowLearningModal(true);
+    } else {
+      nextConceptStep();
     }
   };
   const closeConceptUseCaseModal = () => {
     setShowUseCaseModal(false);
-    if (conceptModalChain === "usecase") {
+    if (conceptModalChain !== "usecase") return;
+    if (conceptStep >= 3) {
       setConceptModalChain("learning");
       setShowLearningModal(true);
+    } else {
+      setConceptModalChain("none");
+      nextConceptStep();
     }
   };
   const closeConceptLearningModal = () => {
@@ -1699,6 +1709,11 @@ export default function RayOptics({ hideNav = false, celebrateSignal, onConceptO
               />
               <div className="canvas-hint bn">{t("মোমবাতিকে ছুঁয়ে যেকোনো দিকে টেনে সরাও (অনুভূমিক ও উল্লম্ব)", "Touch the candle and drag in any direction (horizontal & vertical)")}</div>
             </div>
+            {/* The whole action row is hidden during onboarding — the guided
+                flow drives the light, use-case and learning modals itself,
+                so exposing manual controls here would let a student jump
+                ahead of (or duplicate) the guided sequence. */}
+            {!showConceptOnboarding && (
             <div className="action-row">
               <button
                 className={"light-btn " + (lightOn ? "on" : "")}
@@ -1709,41 +1724,34 @@ export default function RayOptics({ hideNav = false, celebrateSignal, onConceptO
               >
                 {lightOn ? t("আলো নিভাও", "Turn Off Light") : t("আলো জ্বালাও", "Turn On Light")}
               </button>
-              {/* Hidden during onboarding — it drives the light, use-case
-                  and learning modals itself; showing these here too would
-                  let a student jump ahead of (or duplicate) the guided
-                  sequence. */}
-              {!showConceptOnboarding && (
-                <>
-                  <button
-                    className={"outcome-action-btn learning-action-btn" + (highlightActionButtons ? " pulse-highlight" : "")}
-                    onClick={() => setShowLearningModal(true)}
-                    aria-label={t("লার্নিং আউটকাম", "Learning Outcome")}
-                    title={t("লার্নিং আউটকাম", "Learning Outcome")}
-                  >
-                    <Lightbulb size={16} />
-                  </button>
-                  {currentUseCases.length > 0 && (
-                    <button
-                      className={"outcome-action-btn goto-usecase-btn" + (highlightActionButtons ? " pulse-highlight" : "")}
-                      onClick={() => setShowUseCaseModal(true)}
-                      aria-label={t("বাস্তব ব্যবহার", "Real-world Use")}
-                      title={t("বাস্তব ব্যবহার", "Real-world Use")}
-                    >
-                      <Info size={16} />
-                    </button>
-                  )}
-                  <button
-                    className={"outcome-action-btn controls-toggle-btn" + (showControlsPanel ? " active" : "")}
-                    onClick={() => setShowControlsPanel((v) => !v)}
-                    aria-label={t("নিয়ন্ত্রণ (দূরত্ব, প্রিসেট, রশ্মি)", "Controls (distance, presets, rays)")}
-                    title={t("নিয়ন্ত্রণ", "Controls")}
-                  >
-                    <SlidersHorizontal size={16} />
-                  </button>
-                </>
+              <button
+                className={"outcome-action-btn learning-action-btn" + (highlightActionButtons ? " pulse-highlight" : "")}
+                onClick={() => setShowLearningModal(true)}
+                aria-label={t("লার্নিং আউটকাম", "Learning Outcome")}
+                title={t("লার্নিং আউটকাম", "Learning Outcome")}
+              >
+                <Lightbulb size={16} />
+              </button>
+              {currentUseCases.length > 0 && (
+                <button
+                  className={"outcome-action-btn goto-usecase-btn" + (highlightActionButtons ? " pulse-highlight" : "")}
+                  onClick={() => setShowUseCaseModal(true)}
+                  aria-label={t("বাস্তব ব্যবহার", "Real-world Use")}
+                  title={t("বাস্তব ব্যবহার", "Real-world Use")}
+                >
+                  <Info size={16} />
+                </button>
               )}
+              <button
+                className={"outcome-action-btn controls-toggle-btn" + (showControlsPanel ? " active" : "")}
+                onClick={() => setShowControlsPanel((v) => !v)}
+                aria-label={t("নিয়ন্ত্রণ (দূরত্ব, প্রিসেট, রশ্মি)", "Controls (distance, presets, rays)")}
+                title={t("নিয়ন্ত্রণ", "Controls")}
+              >
+                <SlidersHorizontal size={16} />
+              </button>
             </div>
+            )}
             {!showConceptOnboarding && (
             <div className="legend">
               <span><i style={{ background: RAY_COLORS.ray1 }} /> {t("সমান্তরাল রশ্মি", "Parallel ray")}</span>
@@ -1950,17 +1958,17 @@ export default function RayOptics({ hideNav = false, celebrateSignal, onConceptO
                   </>
                 )}
 
-                {/* The real-world-use/learning-outcome chain is keyed only
-                    by mode, not by which placement task was just done, so
-                    it would show the exact same content twice if triggered
-                    after both drag tasks — only run it once, after the
-                    last step. */}
-                {conceptChecked && conceptStep < 3 && (
+                {/* Both placement tasks lead into the real-world-use modal
+                    (genuinely different each time — it's keyed by the
+                    candle's zone) via startPostDragSequence, which only
+                    also chains into the mode-level learning-outcome
+                    summary once, after the last task. */}
+                {conceptChecked && conceptStep < 2 && (
                   <button className="predict-start-btn" onClick={nextConceptStep}>
                     {t("পরবর্তী ধাপ →", "Next step →")}
                   </button>
                 )}
-                {conceptChecked && conceptStep >= 3 && (
+                {conceptChecked && conceptStep >= 2 && (
                   <button className="predict-start-btn" onClick={startPostDragSequence}>
                     {t("বাস্তব উদাহরণ দেখো →", "See a real-world example →")}
                   </button>
@@ -3480,10 +3488,10 @@ const styles = `
     flex-direction: row; align-items: stretch;
     width: 96vw; max-width: 1600px; height: 95vh; max-height: 95vh; padding: 28px;
   }
-  .onboarding-modal-shell > .ro-card.canvas-card { flex: 1 1 48%; min-width: 0; display: flex; flex-direction: column; }
+  .onboarding-modal-shell > .ro-card.canvas-card { flex: 1 1 60%; min-width: 0; display: flex; flex-direction: column; }
   .onboarding-modal-shell > .ro-card.canvas-card .canvas-wrap { flex: 1; }
   .onboarding-modal-shell > .concept-onboard-card {
-    flex: 1 1 52%; min-width: 0; align-self: stretch;
+    flex: 1 1 40%; min-width: 0; align-self: stretch;
     display: flex; flex-direction: column; justify-content: center; overflow-y: auto;
   }
 }
