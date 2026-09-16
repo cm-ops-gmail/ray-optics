@@ -3638,6 +3638,10 @@ input[type="range"]:focus { outline: none; }
    step transitions handled by the per-step React key remount. */
 .concept-onboard-card { position: relative; margin-bottom: 0; padding: 16px; }
 @media (min-width: 768px) { .concept-onboard-card { padding: 22px; } }
+/* On mobile the question card floats over the (normally full-size) canvas
+   like the Lab Test panel — cap its height and let it scroll internally
+   instead of pushing the simulation mostly off-screen above it. */
+.lab-floating-panel .concept-onboard-card { max-height: 42vh; overflow-y: auto; padding-right: 44px; }
 .concept-onboard-card .concept-explain { margin: 4px 0 10px; padding: 12px; animation: fadeSlideIn 0.35s ease-out; }
 .concept-onboard-card .concept-explain .explain-body { font-size: 13px; line-height: 1.6; }
 .concept-onboard-card .quiz-feedback { animation: fadeSlideIn 0.3s ease-out; }
