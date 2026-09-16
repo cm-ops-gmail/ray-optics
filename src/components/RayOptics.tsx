@@ -1836,25 +1836,26 @@ export default function RayOptics({ hideNav = false, celebrateSignal, onConceptO
 
                 {conceptStep === 0 && (
                   <>
-                    <div className="quiz-question bn">{t(IDENTIFY_QUESTION.bn, IDENTIFY_QUESTION.en)}</div>
-                    <div className="quiz-options">
-                      {IDENTIFY_OPTIONS.map((opt, i) => (
-                        <button
-                          key={i}
-                          className={
-                            "quiz-option bn" +
-                            (!conceptChecked && conceptSelectedIdx === i ? " sel" : "") +
-                            (conceptChecked && conceptSelectedIdx === i ? (i === conceptIdentifyCorrectIdx ? " correct" : " wrong") : "") +
-                            (conceptChecked && i === conceptIdentifyCorrectIdx ? " correct" : "")
-                          }
-                          disabled={conceptChecked}
-                          onClick={() => setConceptSelectedIdx(i)}
-                        >
-                          <span className="opt-letter">{String.fromCharCode(65 + i)}</span>
-                          {t(opt.bn, opt.en)}
-                        </button>
-                      ))}
-                    </div>
+                    {/* Once checked, the compare block below already restates
+                        the question/answer — hiding the question+options
+                        keeps the card short enough to need no scrolling. */}
+                    {!conceptChecked && (
+                      <>
+                        <div className="quiz-question bn">{t(IDENTIFY_QUESTION.bn, IDENTIFY_QUESTION.en)}</div>
+                        <div className="quiz-options">
+                          {IDENTIFY_OPTIONS.map((opt, i) => (
+                            <button
+                              key={i}
+                              className={"quiz-option bn" + (conceptSelectedIdx === i ? " sel" : "")}
+                              onClick={() => setConceptSelectedIdx(i)}
+                            >
+                              <span className="opt-letter">{String.fromCharCode(65 + i)}</span>
+                              {t(opt.bn, opt.en)}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
                     {conceptChecked && (
                       <>
                         <div className={"quiz-feedback bn " + (conceptSelectedIdx === conceptIdentifyCorrectIdx ? "correct" : "wrong")}>
@@ -1890,25 +1891,26 @@ export default function RayOptics({ hideNav = false, celebrateSignal, onConceptO
 
                 {conceptStep === 1 && conceptMcq && (
                   <>
-                    <div className="quiz-question bn">{t(conceptMcq.question.bn, conceptMcq.question.en)}</div>
-                    <div className="quiz-options">
-                      {conceptMcq.options.map((opt, i) => (
-                        <button
-                          key={i}
-                          className={
-                            "quiz-option bn" +
-                            (!conceptChecked && conceptSelectedIdx === i ? " sel" : "") +
-                            (conceptChecked && conceptSelectedIdx === i ? (i === conceptMcq.correctIdx ? " correct" : " wrong") : "") +
-                            (conceptChecked && i === conceptMcq.correctIdx ? " correct" : "")
-                          }
-                          disabled={conceptChecked}
-                          onClick={() => setConceptSelectedIdx(i)}
-                        >
-                          <span className="opt-letter">{String.fromCharCode(65 + i)}</span>
-                          {t(opt.bn, opt.en)}
-                        </button>
-                      ))}
-                    </div>
+                    {/* Once checked, only the feedback + live explanation
+                        matter — hiding the question/options keeps the card
+                        short enough to need no scrolling on mobile. */}
+                    {!conceptChecked && (
+                      <>
+                        <div className="quiz-question bn">{t(conceptMcq.question.bn, conceptMcq.question.en)}</div>
+                        <div className="quiz-options">
+                          {conceptMcq.options.map((opt, i) => (
+                            <button
+                              key={i}
+                              className={"quiz-option bn" + (conceptSelectedIdx === i ? " sel" : "")}
+                              onClick={() => setConceptSelectedIdx(i)}
+                            >
+                              <span className="opt-letter">{String.fromCharCode(65 + i)}</span>
+                              {t(opt.bn, opt.en)}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
                     {conceptChecked && (
                       <>
                         <div className={"quiz-feedback bn " + (conceptSelectedIdx === conceptMcq.correctIdx ? "correct" : "wrong")}>
