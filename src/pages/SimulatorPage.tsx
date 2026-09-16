@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useLocation } from "react-router-dom";
 import RayOptics from "@/components/RayOptics";
 import Refraction from "./Refraction";
@@ -55,9 +55,14 @@ const SimulatorPage = () => {
     if (completed) setCongratsSignal((s) => s + 1);
   };
 
-  // Tour steps defined inside component to use t()
+  // Tour steps defined inside component to use t(). Memoized so GuidedTour
+  // receives a stable `steps` array reference — otherwise every unrelated
+  // re-render of this page (e.g. opening the controls panel) recreates a
+  // new array, and GuidedTour's reset effect (keyed on `steps`) fires
+  // again, clearing the "you clicked it" flag it had just set and
+  // re-locking the Next button behind the student's back.
   const isMobileNav = typeof window !== "undefined" && window.innerWidth < 768;
-  const LENS_MIRROR_TOUR: TourStep[] = [
+  const LENS_MIRROR_TOUR: TourStep[] = useMemo(() => [
     isMobileNav
       ? { selector: ".mobile-nav-toggle", requiredSelector: ".mobile-nav-panel", title: t("অপটিক্যাল উপাদান", "Optical Elements"), desc: t("এখানে ট্যাপ করে মেনু খুলুন, তারপর চার ধরনের উপাদানের যেকোনো একটি বেছে নিন — উত্তল লেন্স, অবতল লেন্স, উত্তল দর্পণ বা অবতল দর্পণ।", "Tap here to open the menu, then choose any of the four types — Convex Lens, Concave Lens, Convex Mirror or Concave Mirror."), waitForClick: true }
       : { selector: ".tabs", title: t("অপটিক্যাল উপাদান", "Optical Elements"), desc: t("চার ধরনের উপাদান আছে — উত্তল লেন্স, অবতল লেন্স, উত্তল দর্পণ ও অবতল দর্পণ। যেকোনো একটি ক্লিক করুন।", "There are four types — Convex Lens, Concave Lens, Convex Mirror & Concave Mirror. Click any one."), waitForClick: true },
@@ -71,9 +76,9 @@ const SimulatorPage = () => {
     { selector: ".goto-usecase-btn", title: t("ব্যবহার (Use Case)", "Use Cases"), desc: t("এই বাটনে ক্লিক করলে বাস্তব জীবনে এই লেন্স বা দর্পণের ব্যবহার দেখা যাবে — যেমন চোখের চশমা, টেলিস্কোপ ইত্যাদি।", "Click this button to see real-world applications — like eyeglasses, telescopes, etc."), waitForClick: true },
     { selector: ".usecase-modal-card", title: t("ব্যবহারের উদাহরণ", "Use Case Examples"), desc: t("এখানে বিভিন্ন বাস্তব ব্যবহারের অ্যানিমেশন দেখা যাবে। যেকোনো কার্ডে ক্লিক করুন।", "Animations of real-world applications appear here. Click any card.") },
     { selector: ".lab-test-btn", title: t("অ্যাসেসমেন্ট", "Assessment"), desc: t("৫টি প্রশ্নে অংশ নিয়ে পয়েন্ট অর্জন করুন এবং আপনার বোঝাপড়া যাচাই করুন!", "Join a 5-question assessment, earn points and test your understanding!") },
-  ];
+  ], [t, isMobileNav]);
 
-  const REFRACTION_TOUR: TourStep[] = [
+  const REFRACTION_TOUR: TourStep[] = useMemo(() => [
     isMobileNav
       ? { selector: ".mobile-nav-toggle", requiredSelector: ".mobile-nav-panel", title: t("পরীক্ষা নির্বাচন", "Select Experiment"), desc: t("এখানে ট্যাপ করে মেনু খুলুন, তারপর তিনটি পরীক্ষার যেকোনো একটি বেছে নিন — কাঁচের স্ল্যাব, প্রিজম (বিচ্ছুরণ) বা পানিতে লাঠি।", "Tap here to open the menu, then choose any of the three experiments — Glass Slab, Prism (Dispersion) or Stick in Water."), waitForClick: true }
       : { selector: "#ref-tabs", title: t("পরীক্ষা নির্বাচন", "Select Experiment"), desc: t("তিনটি পরীক্ষা আছে: কাঁচের স্ল্যাব, প্রিজম (বিচ্ছুরণ) এবং পানিতে লাঠি। যেকোনো একটি ট্যাবে ক্লিক করুন।", "Three experiments: Glass Slab, Prism (Dispersion) and Stick in Water. Click any tab."), waitForClick: true },
@@ -84,12 +89,12 @@ const SimulatorPage = () => {
     { selector: ".slider-row", title: t("স্লাইডার", "Sliders"), desc: t("এই স্লাইডারগুলো টেনে কোণ ও প্রতিসরণ সূচক পরিবর্তন করুন — চিত্র সাথে সাথে আপডেট হবে।", "Drag these sliders to change angle and refractive index — the diagram updates instantly.") },
     { selector: ".formula-card", title: t("সূত্র ও গণনা", "Formula & Calculation"), desc: t("এখানে স্নেলের সূত্র এবং বর্তমান মানগুলো দিয়ে গণনা দেখা যাবে: n₁ sin θ₁ = n₂ sin θ₂", "See Snell's Law and live calculations with current values: n₁ sin θ₁ = n₂ sin θ₂") },
     { selector: ".lab-test-btn", title: t("অ্যাসেসমেন্ট", "Assessment"), desc: t("৫টি প্রশ্নে অংশ নিয়ে পয়েন্ট অর্জন করুন এবং আপনার বোঝাপড়া যাচাই করুন!", "Join a 5-question assessment, earn points and test your understanding!") },
-  ];
+  ], [t, isMobileNav]);
 
   // "Build a simulation" guide — separate from the Tutorial (UI/UX) walkthrough above.
   // This one is task-oriented: it walks a first-time user through actually
   // running a simulation, and blocks progress until each required action is done.
-  const LENS_MIRROR_SIM_GUIDE: TourStep[] = [
+  const LENS_MIRROR_SIM_GUIDE: TourStep[] = useMemo(() => [
     isMobileNav
       ? { selector: ".mobile-nav-toggle", requiredSelector: ".mobile-nav-panel", title: t("চলো শুরু করি", "Let's Get Started"), desc: t("এখানে ট্যাপ করে মেনু খুলো, তারপর একটি লেন্স বা দর্পণ বেছে নাও — চলো একসাথে প্রথম সিমুলেশনটি তৈরি করি।", "Tap here to open the menu, then choose a lens or mirror — let's build your first simulation together."), waitForClick: true }
       : { selector: ".tabs", title: t("চলো শুরু করি", "Let's Get Started"), desc: t("একটি লেন্স বা দর্পণ বেছে নাও — চলো একসাথে প্রথম সিমুলেশনটি তৈরি করি।", "Choose a lens or mirror — let's build your first simulation together."), waitForClick: true },
@@ -101,9 +106,9 @@ const SimulatorPage = () => {
     { selector: ".learning-action-btn", title: t("লার্নিং আউটকাম দেখো", "Check the Learning Outcome"), desc: t("এই বাটনে ক্লিক করে দেখো তুমি এই সিমুলেশন থেকে কী শিখলে।", "Click this button to see what you learned from this simulation."), waitForClick: true },
     { selector: ".goto-usecase-btn", title: t("বাস্তব ব্যবহার দেখো", "See the Real-world Use"), desc: t("এই বাটনে ক্লিক করে দেখো এটি বাস্তবে কোথায় ব্যবহৃত হয়।", "Click this button to see where this is used in real life."), waitForClick: true },
     { selector: ".lab-test-btn", title: t("নিজেকে যাচাই করো", "Test Yourself"), desc: t("সিমুলেশন শেষে এখানে ক্লিক করে একটি \"অ্যাসেসমেন্ট\" দাও — দেখো তুমি কতটা শিখেছ! Finish চাপো — একটি বিশেষ কিছু অপেক্ষা করছে!", "Once you're done experimenting, click here to take an \"Assessment\" — see how much you've learned! Press Finish — something special is waiting for you!") },
-  ];
+  ], [t, isMobileNav]);
 
-  const REFRACTION_SIM_GUIDE: TourStep[] = [
+  const REFRACTION_SIM_GUIDE: TourStep[] = useMemo(() => [
     isMobileNav
       ? { selector: ".mobile-nav-toggle", requiredSelector: ".mobile-nav-panel", title: t("চলো শুরু করি", "Let's Get Started"), desc: t("এখানে ট্যাপ করে মেনু খুলো, তারপর একটি পরীক্ষা বেছে নাও — চলো একসাথে প্রতিসরণের একটি সিমুলেশন তৈরি করি।", "Tap here to open the menu, then choose an experiment — let's build a refraction simulation together."), waitForClick: true }
       : { selector: "#ref-tabs", title: t("চলো শুরু করি", "Let's Get Started"), desc: t("একটি পরীক্ষা বেছে নাও — চলো একসাথে প্রতিসরণের একটি সিমুলেশন তৈরি করি।", "Choose an experiment — let's build a refraction simulation together."), waitForClick: true },
@@ -114,7 +119,7 @@ const SimulatorPage = () => {
     { selector: ".learning-action-btn", title: t("লার্নিং আউটকাম দেখো", "Check the Learning Outcome"), desc: t("এই বাটনে ক্লিক করে দেখো তুমি এই সিমুলেশন থেকে কী শিখলে।", "Click this button to see what you learned from this simulation."), waitForClick: true },
     { selector: ".goto-usecase-btn", title: t("কারণ ও ব্যাখ্যা দেখো", "See the Reason & Explanation"), desc: t("এই বাটনে ক্লিক করে দেখো এর পেছনের কারণ কী।", "Click this button to see the reason behind it."), waitForClick: true },
     { selector: ".lab-test-btn", title: t("নিজেকে যাচাই করো", "Test Yourself"), desc: t("সিমুলেশন শেষে এখানে ক্লিক করে একটি \"অ্যাসেসমেন্ট\" দাও — দেখো তুমি কতটা শিখেছ! Finish চাপো — একটি বিশেষ কিছু অপেক্ষা করছে!", "Once you're done experimenting, click here to take an \"Assessment\" — see how much you've learned! Press Finish — something special is waiting for you!") },
-  ];
+  ], [t, isMobileNav]);
 
   const PRESETS = [
     {

@@ -190,7 +190,12 @@ export function GuidedTour({ steps, started, onEnd, lang = "bn", strict = false,
       const el = document.querySelector(requiredSelector);
       if (!el) return;
       attached = true;
-      const handler = () => { setInteractionDone(true); setTimeout(goNext, 250); };
+      // Just unlock "Next" here — don't auto-advance. Auto-advancing right
+      // after the click made it easy to miss that the action even
+      // registered (and left no way forward if the auto-advance itself
+      // silently failed to fire); an explicit tap is more reliable and
+      // gives clear confirmation the step is done.
+      const handler = () => { setInteractionDone(true); };
       el.addEventListener("click", handler, { once: true, capture: true });
       detach = () => el.removeEventListener("click", handler, true);
     };
