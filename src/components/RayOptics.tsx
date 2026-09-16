@@ -3647,9 +3647,24 @@ input[type="range"]:focus { outline: none; }
 .concept-onboard-card { position: relative; margin-bottom: 0; padding: 16px; }
 @media (min-width: 768px) { .concept-onboard-card { padding: 22px; } }
 /* On mobile the question card floats over the (normally full-size) canvas
-   like the Lab Test panel — cap its height and let it scroll internally
-   instead of pushing the simulation mostly off-screen above it. */
-.lab-floating-panel .concept-onboard-card { max-height: 42vh; overflow-y: auto; padding-right: 44px; }
+   like the Lab Test panel — cap its height and shrink the typography/
+   spacing so a full step (question + up to 4 options + button) fits
+   without needing to scroll, instead of pushing the simulation mostly
+   off-screen above it or forcing a scroll inside a tiny card. */
+.lab-floating-panel .concept-onboard-card { max-height: 48vh; overflow-y: auto; padding: 10px; padding-right: 40px; }
+.lab-floating-panel .concept-onboard-card .quiz-header { margin-bottom: 4px; }
+.lab-floating-panel .concept-onboard-card .quiz-icon { font-size: 18px; }
+.lab-floating-panel .concept-onboard-card .quiz-round { font-size: 11px; }
+.lab-floating-panel .concept-onboard-card .quiz-question { font-size: 12.5px; line-height: 1.35; margin-bottom: 6px; }
+.lab-floating-panel .concept-onboard-card .quiz-options { gap: 5px; }
+.lab-floating-panel .concept-onboard-card .quiz-option { padding: 7px 9px; font-size: 12px; min-height: 34px; gap: 7px; }
+.lab-floating-panel .concept-onboard-card .opt-letter { width: 18px; height: 18px; font-size: 9px; }
+.lab-floating-panel .concept-onboard-card .predict-start-btn { padding: 8px 0; font-size: 12.5px; margin-top: 5px; }
+.lab-floating-panel .concept-onboard-card .quiz-feedback { padding: 6px; margin-top: 5px; font-size: 11.5px; }
+.lab-floating-panel .concept-onboard-card .gate-btn-row { gap: 6px; }
+.lab-floating-panel .concept-onboard-card .shape-gallery-item { padding: 8px 6px; }
+.lab-floating-panel .concept-onboard-card .shape-gallery-name { font-size: 11px; }
+.lab-floating-panel .concept-onboard-card .shape-gallery-desc { font-size: 10px; }
 .concept-onboard-card .concept-explain { margin: 4px 0 10px; padding: 12px; animation: fadeSlideIn 0.35s ease-out; }
 .concept-onboard-card .concept-explain .explain-body { font-size: 13px; line-height: 1.6; }
 .concept-onboard-card .quiz-feedback { animation: fadeSlideIn 0.3s ease-out; }
