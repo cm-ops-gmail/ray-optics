@@ -164,7 +164,19 @@ export function GuidedTour({ steps, started, onEnd, lang = "bn", strict = false,
     };
     window.addEventListener("resize", update);
     window.addEventListener("scroll", update, true);
-    return () => { window.removeEventListener("resize", update); window.removeEventListener("scroll", update, true); };
+    // Mobile browsers resize the *visual* viewport (e.g. the address bar
+    // collapsing/expanding as the page scrolls) without always firing a
+    // matching window "resize" promptly — that lag is a common source of
+    // a highlighted target looking mispositioned right after such a
+    // transition. visualViewport fires for exactly that case.
+    window.visualViewport?.addEventListener("resize", update);
+    window.visualViewport?.addEventListener("scroll", update);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+      window.visualViewport?.removeEventListener("resize", update);
+      window.visualViewport?.removeEventListener("scroll", update);
+    };
   }, [started, step, steps]);
 
   useEffect(() => {
@@ -264,19 +276,27 @@ export function GuidedTour({ steps, started, onEnd, lang = "bn", strict = false,
       {/* Backdrop */}
       <div onClick={() => endTour()} style={{ position:"fixed", inset:0, zIndex:9000, background:"rgba(0,0,0,0.6)" }} />
 
-      {/* Spotlight */}
-      {rect && (
-        <div style={{
-          position:"fixed",
-          top: rect.top - PAD, left: rect.left - PAD,
-          width: rect.width + PAD*2, height: rect.height + PAD*2,
-          zIndex: 9001, borderRadius:"10px",
-          boxShadow:`0 0 0 9999px rgba(0,0,0,0.6)`,
-          border: interactive ? "2px solid rgba(74,222,128,0.85)" : "2px solid rgba(147,197,253,0.85)",
-          pointerEvents:"none",
-          transition:"top 0.35s ease, left 0.35s ease, width 0.35s ease, height 0.35s ease",
-        }} />
-      )}
+      {/* Spotlight — clamped to the viewport so a momentarily stale
+          measurement (e.g. right after a mobile address-bar resize) can
+          never render the ring mostly off-screen. */}
+      {rect && (() => {
+        const vw = window.innerWidth, vh = window.innerHeight;
+        const left = Math.max(0, Math.min(rect.left - PAD, vw - 4));
+        const top = Math.max(0, Math.min(rect.top - PAD, vh - 4));
+        const width = Math.max(4, Math.min(rect.width + PAD * 2, vw - left));
+        const height = Math.max(4, Math.min(rect.height + PAD * 2, vh - top));
+        return (
+          <div style={{
+            position:"fixed",
+            top, left, width, height,
+            zIndex: 9001, borderRadius:"10px",
+            boxShadow:`0 0 0 9999px rgba(0,0,0,0.6)`,
+            border: interactive ? "2px solid rgba(74,222,128,0.85)" : "2px solid rgba(147,197,253,0.85)",
+            pointerEvents:"none",
+            transition:"top 0.35s ease, left 0.35s ease, width 0.35s ease, height 0.35s ease",
+          }} />
+        );
+      })()}
 
       {/* Card */}
       <div
