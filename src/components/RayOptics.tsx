@@ -1950,12 +1950,17 @@ export default function RayOptics({ hideNav = false, celebrateSignal, onConceptO
                   </>
                 )}
 
-                {conceptChecked && conceptStep < 2 && (
+                {/* The real-world-use/learning-outcome chain is keyed only
+                    by mode, not by which placement task was just done, so
+                    it would show the exact same content twice if triggered
+                    after both drag tasks — only run it once, after the
+                    last step. */}
+                {conceptChecked && conceptStep < 3 && (
                   <button className="predict-start-btn" onClick={nextConceptStep}>
                     {t("পরবর্তী ধাপ →", "Next step →")}
                   </button>
                 )}
-                {conceptChecked && conceptStep >= 2 && (
+                {conceptChecked && conceptStep >= 3 && (
                   <button className="predict-start-btn" onClick={startPostDragSequence}>
                     {t("বাস্তব উদাহরণ দেখো →", "See a real-world example →")}
                   </button>
