@@ -17,6 +17,12 @@ export interface TourStep {
    * opening it, and a one-shot listener has no way to notice). Checking the
    * actual resulting state instead is self-correcting either way. */
   isSatisfied?: () => boolean;
+  /** For a strict-mode step where the suggested action (e.g. "click a
+   * preset") is only one of several valid ways to actually accomplish the
+   * goal (e.g. dragging the slider works just as well) — Next stays
+   * available even before the specific detected interaction happens, so a
+   * student who does it a different way never gets stuck. */
+  optional?: boolean;
 }
 
 interface GuidedTourProps {
@@ -246,7 +252,7 @@ export function GuidedTour({ steps, started, onEnd, lang = "bn", strict = false,
 
   const current = steps[step];
   const interactive = !!current.waitForClick;
-  const nextLocked = strict && interactive && !interactionDone && !targetMissing;
+  const nextLocked = strict && interactive && !interactionDone && !targetMissing && !current.optional;
   const PAD = 8;
   const accent = "#1d4ed8";
 
