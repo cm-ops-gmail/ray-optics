@@ -1814,8 +1814,8 @@ export default function RayOptics({ hideNav = false, celebrateSignal, onConceptO
                 </div>
                 <div className="shape-gallery">
                   {MODES.map((m, i) => (
-                    <div className="shape-gallery-item" key={m.id}>
-                      <ShapeIcon shape={m.id} size={36} />
+                    <div className="shape-gallery-item" key={m.id} style={{ animationDelay: `${i * 90}ms` }}>
+                      <AnimatedShapeDemo shape={m.id} />
                       <div className="shape-gallery-name bn">{t(IDENTIFY_OPTIONS[i].bn, IDENTIFY_OPTIONS[i].en)}</div>
                       <div className="shape-gallery-desc bn">{t(IDENTIFY_EXPLAIN[m.id].bn, IDENTIFY_EXPLAIN[m.id].en)}</div>
                     </div>
@@ -2292,6 +2292,54 @@ function ShapeIcon({ shape, size = 34 }: { shape: Mode; size?: number }) {
           <path d="M28,5 Q17,17 28,29" fill="none" stroke="currentColor" strokeWidth="1.5" strokeDasharray="2,2" opacity="0.5" />
         </>
       )}
+    </svg>
+  );
+}
+
+// Live animated ray-diagram for the "don't know yet" onboarding gallery —
+// actual light rays traveling through/off each shape and visibly converging
+// or diverging, instead of a static outline. Directly illustrates the
+// converge/diverge line in the explanation text right next to it.
+const RAY_DEMO: Record<Mode, { outline: string; outlineFill?: string; rays: string[] }> = {
+  convexLens: {
+    outline: "M60,8 Q76,35 60,62 Q44,35 60,8 Z",
+    outlineFill: "rgba(120,180,255,0.16)",
+    rays: ["M4,18 L60,18 L100,35 L116,44", "M4,52 L60,52 L100,35 L116,26"],
+  },
+  concaveLens: {
+    outline: "M54,8 Q62,35 54,62 M66,8 Q58,35 66,62",
+    rays: ["M4,18 L60,18 L116,4", "M4,52 L60,52 L116,66"],
+  },
+  convexMirror: {
+    outline: "M58,8 Q74,35 58,62",
+    rays: ["M4,18 L58,25 L4,2", "M4,52 L58,45 L4,68"],
+  },
+  concaveMirror: {
+    outline: "M58,8 Q42,35 58,62",
+    rays: ["M4,4 L58,20 L20,35 L4,50", "M4,66 L58,50 L20,35 L4,20"],
+  },
+};
+
+function AnimatedShapeDemo({ shape }: { shape: Mode }) {
+  const demo = RAY_DEMO[shape];
+  return (
+    <svg width={64} height={40} viewBox="0 0 120 70" className="shape-demo">
+      {demo.rays.map((d, i) => (
+        <path key={i} d={d} fill="none" stroke="#FFB020" strokeWidth="1.5" opacity="0.55" />
+      ))}
+      <path
+        d={demo.outline}
+        fill={demo.outlineFill || "none"}
+        stroke="currentColor"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+        className="shape-demo-outline"
+      />
+      {demo.rays.map((d, i) => (
+        <circle key={i} r="3" fill="#FFB020" className="shape-demo-photon">
+          <animateMotion dur="1.8s" begin={`${i * 0.5}s`} repeatCount="indefinite" path={d} />
+        </circle>
+      ))}
     </svg>
   );
 }
@@ -3512,11 +3560,25 @@ const styles = `
 .predict-start-btn.secondary { background: #fff; color: var(--c-primary); border: 2px solid var(--c-primary); }
 .predict-start-btn.secondary:hover:not(:disabled) { background: var(--c-nav-active-tint); }
 .shape-gallery { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 4px 0 6px; }
+@keyframes shapeCardIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.94); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
 .shape-gallery-item {
   display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px;
   padding: 12px 8px; border: 1px solid var(--border); border-radius: 12px; background: var(--gray-50, #FAFAF9);
+  opacity: 0; animation: shapeCardIn 0.45s cubic-bezier(0.16,1,0.3,1) forwards;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
+.shape-gallery-item:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.08); border-color: var(--c-primary-container); }
 .shape-gallery-item .shape-icon { color: var(--gray-600); }
+.shape-demo { color: var(--gray-600); }
+@keyframes shapeDemoGlow {
+  0%, 100% { stroke: currentColor; filter: none; }
+  50% { stroke: var(--c-primary); filter: drop-shadow(0 0 3px rgba(28,171,85,0.35)); }
+}
+.shape-demo-outline { animation: shapeDemoGlow 2.6s ease-in-out infinite; }
+.shape-demo-photon { filter: drop-shadow(0 0 2px rgba(255,176,32,0.8)); }
 .shape-gallery-name { font-size: 12px; font-weight: 800; color: var(--gray-800, #1F2937); }
 .shape-gallery-desc { font-size: 11px; line-height: 1.5; color: var(--gray-500); }
 @media (min-width: 900px) {
