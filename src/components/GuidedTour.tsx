@@ -10,6 +10,13 @@ export interface TourStep {
    * `selector` — use when `selector` (spotlighted) is a toggle that reveals
    * the real target later, e.g. a hamburger button that opens a menu. */
   requiredSelector?: string;
+  /** If set, this replaces click-detection entirely: the step is polled as
+   * done whenever this returns true. Use for a toggle-style action where a
+   * one-shot click listener is unreliable — e.g. "open this panel" when the
+   * panel might already be open (a click would then close it instead of
+   * opening it, and a one-shot listener has no way to notice). Checking the
+   * actual resulting state instead is self-correcting either way. */
+  isSatisfied?: () => boolean;
 }
 
 interface GuidedTourProps {
@@ -181,7 +188,32 @@ export function GuidedTour({ steps, started, onEnd, lang = "bn", strict = false,
 
   useEffect(() => {
     if (!started || !steps[step]?.waitForClick) return;
-    const requiredSelector = steps[step].requiredSelector || steps[step].selector;
+    const stepDef = steps[step];
+    let advanced = false;
+    const advanceOnce = () => {
+      if (advanced) return;
+      advanced = true;
+      setTimeout(goNext, 250);
+    };
+
+    // A state predicate replaces click-detection entirely for a toggle-
+    // style action, where a one-shot click listener can't tell a real
+    // "turned it on" from an accidental "turned it back off" (e.g. the
+    // panel was already open, so this click just closed it) — poll the
+    // actual resulting state instead, so it's satisfied immediately if
+    // already true, and un-satisfied again if the user toggles it off.
+    if (stepDef.isSatisfied) {
+      const check = () => {
+        const done = !!stepDef.isSatisfied!();
+        setInteractionDone(done);
+        if (done) advanceOnce();
+      };
+      check();
+      const poll = window.setInterval(check, 300);
+      return () => window.clearInterval(poll);
+    }
+
+    const requiredSelector = stepDef.requiredSelector || stepDef.selector;
     let attached = false;
     let detach: (() => void) | null = null;
 
@@ -190,12 +222,7 @@ export function GuidedTour({ steps, started, onEnd, lang = "bn", strict = false,
       const el = document.querySelector(requiredSelector);
       if (!el) return;
       attached = true;
-      // Just unlock "Next" here — don't auto-advance. Auto-advancing right
-      // after the click made it easy to miss that the action even
-      // registered (and left no way forward if the auto-advance itself
-      // silently failed to fire); an explicit tap is more reliable and
-      // gives clear confirmation the step is done.
-      const handler = () => { setInteractionDone(true); };
+      const handler = () => { setInteractionDone(true); advanceOnce(); };
       el.addEventListener("click", handler, { once: true, capture: true });
       detach = () => el.removeEventListener("click", handler, true);
     };
