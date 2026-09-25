@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { Microscope, FlaskConical, Target, X, RotateCcw, Chrome as Home, Lightbulb, Info, ChevronRight, ChevronDown, ChevronUp, Trophy, Star, Eye, ArrowDown, SlidersHorizontal, GraduationCap, Sparkles } from "lucide-react";
+import { Microscope, FlaskConical, Target, X, RotateCcw, Chrome as Home, Lightbulb, Info, ChevronRight, ChevronDown, ChevronUp, Trophy, Star, Eye, ArrowDown, SlidersHorizontal, GraduationCap } from "lucide-react";
 import { useLang } from "@/context/LangContext";
 
 type Mode = "convexLens" | "concaveLens" | "convexMirror" | "concaveMirror";
@@ -1918,7 +1918,6 @@ export default function RayOptics({ hideNav = false, celebrateSignal, onConceptO
                         </div>
                         <div className="explain-card-v2 concept-explain">
                           <div className="explain-header">
-                            <div className="explain-icon-pulse"><Sparkles size={18} /></div>
                             <div className="explain-title bn">{t("সিমুলেশনে দেখো — আসলে কী হচ্ছে:", "Watch the simulation — here's what's really happening:")}</div>
                           </div>
                           <p className="explain-body bn">{explanation}</p>
@@ -1946,7 +1945,6 @@ export default function RayOptics({ hideNav = false, celebrateSignal, onConceptO
                         <div className="quiz-feedback bn correct">{t("চমৎকার! ঠিক জায়গায় নিয়ে গেছো।", "Nicely done! You got it there.")}</div>
                         <div className="explain-card-v2 concept-explain">
                           <div className="explain-header">
-                            <div className="explain-icon-pulse"><Sparkles size={18} /></div>
                             <div className="explain-title bn">{t("দেখো — আসলে কী হচ্ছে:", "Here's what's really happening:")}</div>
                           </div>
                           <p className="explain-body bn">{explanation}</p>
