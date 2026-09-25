@@ -1,8 +1,8 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useSearchParams, useLocation } from "react-router-dom";
 import RayOptics from "@/components/RayOptics";
 import Refraction from "./Refraction";
-import { Sparkles, GraduationCap, Zap, Play, X, ChevronRight, Navigation, MessageCircle, Menu, Info } from "lucide-react";
+import { Sparkles, GraduationCap, Zap, Play, X, ChevronRight, MessageCircle, Menu, Info } from "lucide-react";
 import { GuidedTour, TourStep } from "@/components/GuidedTour";
 import { useLang } from "@/context/LangContext";
 
@@ -34,6 +34,21 @@ const SimulatorPage = () => {
   const [childOnboardingActive, setChildOnboardingActive] = useState(false);
 
   const { lang, setLang, t } = useLang();
+
+  // When the in-simulator concept onboarding finishes (or is skipped) for a
+  // first-time visitor, roll straight into the "i" guided tour. Afterwards
+  // it's only available by tapping the "i" button.
+  const prevOnboardingRef = useRef(false);
+  const handleConceptOnboardingChange = useCallback((active: boolean) => {
+    const wasActive = prevOnboardingRef.current;
+    prevOnboardingRef.current = active;
+    setChildOnboardingActive(active);
+    if (wasActive && !active) {
+      let done = false;
+      try { done = !!localStorage.getItem(ONBOARDING_DONE_KEY_LENS_MIRROR); } catch {}
+      if (!done) { setShowIntro(false); setSimGuideActive(true); }
+    }
+  }, []);
 
   // Determine type from search param OR pathname
   const typeParam = searchParams.get("type");
@@ -528,15 +543,6 @@ const SimulatorPage = () => {
           >
             <Info size={16} />
           </button>
-          {/* Tutorial button */}
-          <button
-            id="guided-tour-btn"
-            className="tour-btn"
-            onClick={() => { setShowIntro(false); setTourActive(true); }}
-          >
-            <Navigation size={14} />
-            Tutorial
-          </button>
         </div>
       </header>
 
@@ -613,7 +619,7 @@ const SimulatorPage = () => {
         {type === "refraction" ? (
           <Refraction key={`refraction-${presetKey}`} hideNav celebrateSignal={congratsSignal} />
         ) : (
-          <RayOptics key={`rayoptics-${presetKey}`} hideNav celebrateSignal={congratsSignal} onConceptOnboardingChange={setChildOnboardingActive} />
+          <RayOptics key={`rayoptics-${presetKey}`} hideNav celebrateSignal={congratsSignal} onConceptOnboardingChange={handleConceptOnboardingChange} />
         )}
       </div>
 
