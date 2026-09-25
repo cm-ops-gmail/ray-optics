@@ -358,9 +358,9 @@ interface PlacementTask {
   inZone: (ratio: number) => boolean;
 }
 const PLACEMENT_ZONE_POOL: PlacementTask[] = [
-  { label: { bn: "টেনে অনেকটা বাইরে (2F-এর ওপারে)", en: "well out, past 2F" }, inZone: (r) => r > 2.15 },
-  { label: { bn: "টেনে মাঝামাঝি (F ও 2F-এর মধ্যে)", en: "to the middle, between F and 2F" }, inZone: (r) => r > 1.15 && r < 1.85 },
-  { label: { bn: "টেনে ভেতরে (F-এর কাছে)", en: "back in, close to F" }, inZone: (r) => r < 0.85 },
+  { label: { bn: "মোমবাতিটি ধরে টেনে 2F-এর বাইরে নিয়ে যাও।", en: "Grab the candle and drag it beyond 2F." }, inZone: (r) => r > 2.15 },
+  { label: { bn: "মোমবাতিটি ধরে টেনে F ও 2F-এর মাঝখানে নিয়ে যাও।", en: "Grab the candle and drag it to a spot between F and 2F." }, inZone: (r) => r > 1.15 && r < 1.85 },
+  { label: { bn: "মোমবাতিটি ধরে টেনে F-এর ভেতরে নিয়ে যাও।", en: "Grab the candle and drag it inside F." }, inZone: (r) => r < 0.85 },
 ];
 
 // ============== PER-MODE: focal-length sign explanation ==============
@@ -1935,11 +1935,7 @@ export default function RayOptics({ hideNav = false, celebrateSignal, onConceptO
 
                 {conceptStep >= 2 && conceptTask && (
                   <>
-                    <div className="quiz-question bn">
-                      {t("মোমবাতিটি ধরে ", "Grab the candle and drag it — ")}
-                      <strong>{t(conceptTask.label.bn, conceptTask.label.en)}</strong>
-                      {t("।", ".")}
-                    </div>
+                    <div className="quiz-question bn">{t(conceptTask.label.bn, conceptTask.label.en)}</div>
                     {!conceptChecked && (
                       <div className="quest-mode-hint bn">
                         {t("তুমি এখন আছো:", "You're currently at:")} <strong>{conceptCurrentZoneLabel}</strong>
