@@ -278,15 +278,13 @@ const SimulatorPage = () => {
           font-family: 'Hind Siliguri', 'Inter', sans-serif; position: relative;
         }
         .central-header {
-          display: flex; justify-content: space-between; align-items: center;
-          padding: 12px 0 24px; max-width: 1216px;
+          display: flex; justify-content: flex-end; align-items: center;
+          padding: 8px 0 12px; max-width: 1216px;
           margin-left: auto; margin-right: auto; width: 100%; gap: 12px;
         }
-        .header-logo { height: 44px; width: auto; object-fit: contain; flex-shrink: 0; }
         .header-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
         @media (max-width: 540px) {
-          .central-header { padding: 12px 0 16px; max-width: none; gap: 8px; }
-          .header-logo { height: 34px; }
+          .central-header { padding: 8px 0 10px; max-width: none; gap: 8px; }
           .header-right { gap: 7px; }
         }
         .main-nav-container { max-width: 1216px; margin: 0 auto 16px; }
@@ -521,7 +519,6 @@ const SimulatorPage = () => {
       {!childOnboardingActive && (
       <>
       <header className="central-header">
-        <img src="https://cdn.10minuteschool.com/images/svg/Origin%20Labs%20Black.svg" alt="10 Minute School" className="header-logo" />
         <div className="header-right">
           {/* Language toggle */}
           <div className="lang-toggle" role="group" aria-label="Language">
